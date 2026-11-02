@@ -6,15 +6,14 @@
 
 import type { User } from '../../model/user.js';
 import type { Buyer } from '../../entities/Buyer.js';
-import type { DeliveryAddress, PaymentMethod, BuyerPreferences } from '../../model/value-objects.js';
+import type { DeliveryAddress, PaymentMethod } from '../../model/value-objects.js';
 import type { ShoppingCart } from '../../entities/ShoppingCart.js';
 import type { Product } from '../../entities/Product.js';
 import type { ProductVariant } from '../../entities/ProductVariant.js';
 import type { Order } from '../../entities/Order.js';
-import type { Shipment, ShipmentStatusUpdate } from '../../entities/Shipment.js';
+import type { Shipment } from '../../entities/Shipment.js';
 import type { Return } from '../../entities/Return.js';
 import type { Operation } from '../../entities/Operation.js';
-import type { PrivacyPolicy } from '../../model/value-objects.js';
 
 export interface Quantity {
   value: number;

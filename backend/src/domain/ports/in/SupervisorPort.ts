@@ -9,7 +9,7 @@ import type { Payment } from '../../entities/Payment.js';
 import type { Shipment } from '../../entities/Shipment.js';
 import type { Return } from '../../entities/Return.js';
 import type { Buyer } from '../../entities/Buyer.js';
-import type { AuditLog } from '../../domain/model/AuditLog.js';
+import type { AuditLog } from '../../model/AuditLog.js';
 import type { SellerPerformanceMetrics } from './SellerPort.js';
 
 export interface DateRange {

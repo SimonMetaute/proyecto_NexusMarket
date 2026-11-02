@@ -13,7 +13,7 @@ import type { Inventory } from '../../entities/Inventory.js';
 import type { Order } from '../../entities/Order.js';
 import type { Shipment } from '../../entities/Shipment.js';
 import type { Return } from '../../entities/Return.js';
-import type { AuditLog } from '../../domain/model/AuditLog.js';
+import type { AuditLog } from '../../model/AuditLog.js';
 
 export interface StoreStatus {
   value: string;

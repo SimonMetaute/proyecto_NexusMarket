@@ -12,7 +12,7 @@ import type { Order } from '../../entities/Order.js';
 import type { Payment } from '../../entities/Payment.js';
 import type { Return } from '../../entities/Return.js';
 import type { Shipment } from '../../entities/Shipment.js';
-import type { AuditLog } from '../../domain/model/AuditLog.js';
+import type { AuditLog } from '../../model/AuditLog.js';
 import { SellerVerificationStatus } from '../../model/enums.js';
 
 export interface UserFilterCriteria {
