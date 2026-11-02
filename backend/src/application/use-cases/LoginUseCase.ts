@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { AuditLog } from '../../domain/model/AuditLog.js';
 import type { UserRepository } from '../../domain/ports/out/UserRepository.js';
+import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 
 export interface LoginParams {
   email: string;
@@ -24,9 +26,11 @@ const JWT_SECRET = process.env.JWT_SECRET ?? 'nexusmarket-dev-secret';
 
 export class LoginUseCase {
   private readonly userRepository: UserRepository;
+  private readonly auditLogRepository: AuditLogRepository;
 
-  constructor(userRepository: UserRepository) {
+  constructor(userRepository: UserRepository, auditLogRepository: AuditLogRepository) {
     this.userRepository = userRepository;
+    this.auditLogRepository = auditLogRepository;
   }
 
   async execute(params: LoginParams): Promise<LoginResult> {
@@ -43,6 +47,18 @@ export class LoginUseCase {
       JWT_SECRET,
       { expiresIn: '1h' },
     );
+
+    // Register audit event for successful login.
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'USER_LOGIN',
+        timestamp: new Date(),
+        details: { email: user.email },
+      }),
+    );
+
     return { token, userId: user.userId, userType: user.userType };
   }
 }

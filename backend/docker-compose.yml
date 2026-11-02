@@ -12,6 +12,29 @@ services:
       MYSQL_PASSWORD: nexus_pass
     volumes:
       - mysql_data:/var/lib/mysql
+      
+  mongodb:
+    image: mongo:latest
+    container_name: nexusmarket-mongo-db
+    environment:
+      - MONGO_INITDB_DATABASE=audit_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - backend_network
 
 volumes:
   mysql_data:
+  mongodb_data:
+
+networks:
+  backend_network:
+    driver: bridge
+
+
+
+
+
+

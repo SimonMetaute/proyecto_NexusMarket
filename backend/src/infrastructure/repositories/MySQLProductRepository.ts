@@ -1,19 +1,16 @@
 import type { RowDataPacket } from 'mysql2/promise';
 import type { ProductRepository } from '../../domain/ports/out/ProductRepository.js';
-import { Product } from '../../domain/model/product.js';
+import { Product } from '../../domain/entities/Product.js';
 import { pool } from '../database/mysql-pool.js';
 
 interface ProductRow extends RowDataPacket {
   productId: string;
   name: string;
   description: string;
-  category: string;
-  sku: string;
+  price: number | string;
   sellerId: string;
-  basePrice: number | string;
-  productStatus: string;
-  publicationDate: Date | string;
-  brand: string;
+  stock: number | string;
+  createdAt: Date | string;
 }
 
 function toDate(value: Date | string): Date {
@@ -29,13 +26,10 @@ function toDomain(row: ProductRow): Product {
     productId: row.productId,
     name: row.name,
     description: row.description,
-    category: row.category,
-    sku: row.sku,
+    price: toNumber(row.price),
     sellerId: row.sellerId,
-    basePrice: toNumber(row.basePrice),
-    productStatus: row.productStatus,
-    publicationDate: toDate(row.publicationDate),
-    brand: row.brand,
+    stock: toNumber(row.stock),
+    createdAt: toDate(row.createdAt),
   });
 }
 
@@ -43,30 +37,23 @@ export class MySQLProductRepository implements ProductRepository {
   async save(product: Product): Promise<void> {
     await pool.execute(
       `INSERT INTO products (
-        productId, name, description, category, sku, sellerId,
-        basePrice, productStatus, publicationDate, brand
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        productId, name, description, price, sellerId, stock, createdAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         name = VALUES(name),
         description = VALUES(description),
-        category = VALUES(category),
-        sku = VALUES(sku),
+        price = VALUES(price),
         sellerId = VALUES(sellerId),
-        basePrice = VALUES(basePrice),
-        productStatus = VALUES(productStatus),
-        publicationDate = VALUES(publicationDate),
-        brand = VALUES(brand)`,
+        stock = VALUES(stock),
+        createdAt = VALUES(createdAt)`,
       [
         product.productId,
         product.name,
         product.description,
-        product.category,
-        product.sku,
+        product.price,
         product.sellerId,
-        product.basePrice,
-        product.productStatus,
-        product.publicationDate,
-        product.brand,
+        product.stock,
+        product.createdAt,
       ],
     );
   }
@@ -80,12 +67,8 @@ export class MySQLProductRepository implements ProductRepository {
     return toDomain(row);
   }
 
-  async findBySku(sku: string): Promise<Product | null> {
-    const [rows] = await pool.query<ProductRow[]>('SELECT * FROM products WHERE sku = ? LIMIT 1', [sku]);
-    const row = rows[0];
-    if (row === undefined) {
-      return null;
-    }
-    return toDomain(row);
+  async findAll(): Promise<Product[]> {
+    const [rows] = await pool.query<ProductRow[]>('SELECT * FROM products');
+    return rows.map(toDomain);
   }
 }

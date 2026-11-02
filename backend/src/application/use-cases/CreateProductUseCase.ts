@@ -15,35 +15,31 @@
  *  - Enforces the business rule "SKU must be globally unique."
  *    (SDD Section 2.6) at this layer, since it requires querying persistence.
  */
-import type { ProductCategory, ProductStatus } from '../../domain/model/product.js';
-import { Product } from '../../domain/model/product.js';
+import { Product } from '../../domain/entities/Product.js';
 import type { ProductRepository } from '../../domain/ports/out/ProductRepository.js';
 
 /**
  * Input data for creating a product.
  * Only business data provided by the caller; system-generated values
- * (productId, publicationDate) are produced inside the use case.
+ * (productId, createdAt) are produced inside the use case.
  */
 export interface CreateProductParams {
   name: string;
   description: string;
-  category: ProductCategory;
-  sku: string;
+  price: number;
   sellerId: string;
-  basePrice: number;
-  productStatus: ProductStatus;
-  brand: string;
+  stock: number;
 }
 
 /**
- * Business error thrown when the SKU is already registered.
+ * Business error thrown when the product name is already registered.
  * Belongs to the application layer so upper layers can map it to an
  * appropriate response without coupling to infrastructure.
  */
-export class SkuAlreadyExistsError extends Error {
-  constructor(sku: string) {
-    super(`The SKU "${sku}" is already registered.`);
-    this.name = 'SkuAlreadyExistsError';
+export class ProductNameAlreadyExistsError extends Error {
+  constructor(name: string) {
+    super(`The product name "${name}" is already registered.`);
+    this.name = 'ProductNameAlreadyExistsError';
   }
 }
 
@@ -61,34 +57,30 @@ export class CreateProductUseCase {
 
   /**
    * Executes the use case:
-   *  1. Verifies the SKU is not already registered (business rule).
+   *  1. Verifies the product name is not already registered (business rule).
    *  2. Builds the `Product` aggregate: `productId` via `crypto.randomUUID()`
-   *     and `publicationDate` with the current date.
+   *     and `createdAt` with the current date.
    *  3. Persists it via the injected repository.
    *
    * @returns the created `Product` aggregate.
-   * @throws SkuAlreadyExistsError if the SKU already exists.
+   * @throws ProductNameAlreadyExistsError if the name already exists.
    */
   async execute(params: CreateProductParams): Promise<Product> {
-    // 1. Uniqueness check (business rule from the SDD).
-    const existingProduct = await this.productRepository.findBySku(params.sku);
-    if (existingProduct !== null) {
-      throw new SkuAlreadyExistsError(params.sku);
+    // 1. Uniqueness check (business rule).
+    const existingProducts = await this.productRepository.findAll();
+    if (existingProducts.some(p => p.name === params.name)) {
+      throw new ProductNameAlreadyExistsError(params.name);
     }
 
     // 2. Build the domain aggregate (system-generated fields use built-ins).
-    const now = new Date();
     const product = new Product({
       productId: globalThis.crypto.randomUUID(),
       name: params.name,
       description: params.description,
-      category: params.category,
-      sku: params.sku,
+      price: params.price,
       sellerId: params.sellerId,
-      basePrice: params.basePrice,
-      productStatus: params.productStatus,
-      publicationDate: now,
-      brand: params.brand,
+      stock: params.stock,
+      createdAt: new Date(),
     });
 
     // 3. Persist through the injected port.

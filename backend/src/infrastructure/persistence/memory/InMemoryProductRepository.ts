@@ -1,8 +1,8 @@
 import type { ProductRepository } from '../../../domain/ports/out/ProductRepository.js';
-import { Product } from '../../../domain/model/product.js';
+import { Product } from '../../../domain/entities/Product.js';
 
 export class InMemoryProductRepository implements ProductRepository {
-  private readonly products: Map<string, Product> = new Map();
+  private products: Map<string, Product> = new Map();
 
   async save(product: Product): Promise<void> {
     this.products.set(product.productId, product);
@@ -12,12 +12,7 @@ export class InMemoryProductRepository implements ProductRepository {
     return this.products.get(id) ?? null;
   }
 
-  async findBySku(sku: string): Promise<Product | null> {
-    for (const product of this.products.values()) {
-      if (product.sku === sku) {
-        return product;
-      }
-    }
-    return null;
+  async findAll(): Promise<Product[]> {
+    return Array.from(this.products.values());
   }
 }

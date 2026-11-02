@@ -1,4 +1,4 @@
-import type { Product } from '../../../domain/model/product.js';
+import type { Product } from '../../../domain/entities/Product.js';
 
 export class ProductMapper {
   static toResponse(product: Product): Record<string, unknown> {
@@ -6,13 +6,10 @@ export class ProductMapper {
       productId: product.productId,
       name: product.name,
       description: product.description,
-      category: product.category,
-      sku: product.sku,
+      price: product.price,
       sellerId: product.sellerId,
-      basePrice: product.basePrice,
-      productStatus: product.productStatus,
-      publicationDate: product.publicationDate,
-      brand: product.brand,
+      stock: product.stock,
+      createdAt: product.createdAt,
     };
   }
 }

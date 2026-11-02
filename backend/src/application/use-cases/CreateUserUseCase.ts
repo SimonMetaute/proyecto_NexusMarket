@@ -17,7 +17,9 @@
  */
 import bcrypt from 'bcrypt';
 import { User, IdentityDocument, UserType } from '../../domain/model/user.js';
+import { AuditLog } from '../../domain/model/AuditLog.js';
 import type { UserRepository } from '../../domain/ports/out/UserRepository.js';
+import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 
 /**
  * Input data for creating a user.
@@ -50,14 +52,16 @@ export class EmailAlreadyExistsError extends Error {
 
 export class CreateUserUseCase {
   private readonly userRepository: UserRepository;
+  private readonly auditLogRepository: AuditLogRepository;
 
   /**
-   * The port is injected through the constructor. The concrete implementation
-   * (e.g. an in-memory, SQL, or NoSQL adapter) is provided by the caller,
+   * The ports are injected through the constructor. The concrete implementations
+   * (e.g. an in-memory, SQL, or NoSQL adapter) are provided by the caller,
    * keeping this use case pure and testable.
    */
-  constructor(userRepository: UserRepository) {
+  constructor(userRepository: UserRepository, auditLogRepository: AuditLogRepository) {
     this.userRepository = userRepository;
+    this.auditLogRepository = auditLogRepository;
   }
 
   /**
@@ -98,6 +102,17 @@ export class CreateUserUseCase {
 
     // 3. Persist through the injected port.
     await this.userRepository.save(user);
+
+    // 4. Register audit event for user creation.
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'USER_REGISTERED',
+        timestamp: new Date(),
+        details: { role: user.userType },
+      }),
+    );
 
     return user;
   }

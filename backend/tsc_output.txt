@@ -1,0 +1,3 @@
+src/infrastructure/persistence/memory/InMemoryProductRepository.ts(17,47): error TS1127: Invalid character.
+src/infrastructure/persistence/memory/InMemoryProductRepository.ts(17,49): error TS1127: Invalid character.
+src/infrastructure/persistence/memory/InMemoryProductRepository.ts(19,1): error TS1005: '}' expected.

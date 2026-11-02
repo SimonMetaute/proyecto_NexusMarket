@@ -1,6 +1,5 @@
 /**
  * Outbound Port: ProductRepository.
- * Source: SDD/Domain/Domain_model.md — Section 2.6 "Product".
  *
  * DDD purity rules applied:
  *  - This is an abstraction (a port) owned by the domain. It declares WHAT
@@ -10,7 +9,7 @@
  *  - `import type` is used because `Product` is needed only as a type here
  *    (required by `verbatimModuleSyntax`).
  */
-import type { Product } from '../../model/product.js';
+import type { Product } from '../../entities/Product.js';
 
 /**
  * Persistence contract for the `Product` aggregate.
@@ -32,9 +31,8 @@ export interface ProductRepository {
   findById(id: string): Promise<Product | null>;
 
   /**
-   * Finds a product by its SKU (used to enforce the "SKU must be globally
-   * unique" business rule).
-   * @returns the Product if it exists, otherwise null.
+   * Finds all products.
+   * @returns an array of all Product instances.
    */
-  findBySku(sku: string): Promise<Product | null>;
+  findAll(): Promise<Product[]>;
 }
