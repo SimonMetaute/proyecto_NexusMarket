@@ -1,77 +1,150 @@
 /**
  * Application Service: BuyerService
  * Implements BuyerPort
+ *
+ * Lógica de negocio del comprador: perfil, direcciones, métodos de pago,
+ * carrito (upsert), checkout, pedidos, envíos, devoluciones y privacidad.
  */
-
-import type { BuyerPort, Quantity, BuyerPreferences, PrivacyPolicy, ShipmentStatusUpdate } from '../../domain/ports/in/BuyerPort.js';
+import type {
+  BuyerPort,
+  Quantity,
+  BuyerPreferences,
+  PrivacyPolicy,
+  ShipmentStatusUpdate,
+} from '../../domain/ports/in/BuyerPort.js';
 import type { User } from '../../domain/model/user.js';
-import type { Buyer } from '../../domain/entities/Buyer.js';
+import { Buyer, BuyerTrustLevel } from '../../domain/entities/Buyer.js';
 import type { DeliveryAddress, PaymentMethod } from '../../domain/model/value-objects.js';
-import type { ShoppingCart } from '../../domain/entities/ShoppingCart.js';
+import { CartLine, ShoppingCart, CartStatus } from '../../domain/entities/ShoppingCart.js';
+import { OrderLine, Order } from '../../domain/entities/Order.js';
+import { OrderStatus, WarehouseStatus } from '../../domain/model/enums.js';
+import { Warehouse } from '../../domain/entities/Warehouse.js';
+import { WarehouseLocation } from '../../domain/model/value-objects.js';
 import type { Product } from '../../domain/entities/Product.js';
 import type { ProductVariant } from '../../domain/entities/ProductVariant.js';
-import type { Order } from '../../domain/entities/Order.js';
 import type { Shipment } from '../../domain/entities/Shipment.js';
 import type { Return } from '../../domain/entities/Return.js';
 import type { Operation } from '../../domain/entities/Operation.js';
 import type { BuyerRepositoryPort } from '../../domain/ports/out/BuyerRepositoryPort.js';
 import type { ShoppingCartRepositoryPort } from '../../domain/ports/out/ShoppingCartRepositoryPort.js';
 import type { OrderRepositoryPort } from '../../domain/ports/out/OrderRepositoryPort.js';
+import type { InventoryRepositoryPort } from '../../domain/ports/out/InventoryRepositoryPort.js';
+import type { ProductRepository } from '../../domain/ports/out/ProductRepository.js';
+import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
+import { AuditLog } from '../../domain/model/AuditLog.js';
+import { ApiError } from '../../infrastructure/http/errors/ApiError.js';
 
 export class BuyerService implements BuyerPort {
   constructor(
     private readonly buyerRepository: BuyerRepositoryPort,
     private readonly cartRepository: ShoppingCartRepositoryPort,
     private readonly orderRepository: OrderRepositoryPort,
+    private readonly inventoryRepository: InventoryRepositoryPort,
+    private readonly productRepository: ProductRepository,
+    private readonly auditLogRepository: AuditLogRepository,
   ) {}
 
+  // --- Profile Management ---
   async consultMyProfile(user: User): Promise<Buyer> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     return buyer;
   }
 
   async updateMyProfile(user: User, buyer: Buyer): Promise<Buyer> {
+    const existing = await this.buyerRepository.findByUser(user);
+    if (!existing) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
+    if (existing.buyerId !== buyer.buyerId) {
+      throw ApiError.forbidden('Cannot modify another buyer profile');
+    }
     return this.buyerRepository.save(buyer);
   }
 
   async consultMyTrustLevel(user: User): Promise<string> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     return buyer.trustLevel;
   }
 
+  // --- Address Management ---
   async consultMyDeliveryAddresses(user: User): Promise<DeliveryAddress[]> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     return buyer.deliveryAddresses;
   }
 
   async addDeliveryAddress(user: User, address: DeliveryAddress): Promise<DeliveryAddress> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     buyer.addDeliveryAddress(address);
     await this.buyerRepository.save(buyer);
     return address;
   }
 
   async setPrimaryDeliveryAddress(user: User, address: DeliveryAddress): Promise<DeliveryAddress> {
+    const buyer = await this.buyerRepository.findByUser(user);
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
+    const normalized = buyer.deliveryAddresses.map((a) =>
+      a.addressId === address.addressId ? { ...a, isPrimary: true } : { ...a, isPrimary: false },
+    );
+    const params: any = {
+      buyerId: buyer.buyerId,
+      userId: buyer.userId,
+      deliveryAddresses: normalized,
+      paymentMethods: buyer.paymentMethods,
+      trustLevel: buyer.trustLevel,
+    };
+    if (buyer.lastPurchaseDate) {
+      params.lastPurchaseDate = buyer.lastPurchaseDate;
+    }
+    await this.buyerRepository.save(new Buyer(params));
     return address;
   }
 
   async removeDeliveryAddress(user: User, address: DeliveryAddress): Promise<void> {
-    // Implementation
+    const buyer = await this.buyerRepository.findByUser(user);
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
+    const params: any = {
+      buyerId: buyer.buyerId,
+      userId: buyer.userId,
+      deliveryAddresses: buyer.deliveryAddresses.filter((a) => a.addressId !== address.addressId),
+      paymentMethods: buyer.paymentMethods,
+      trustLevel: buyer.trustLevel,
+    };
+    if (buyer.lastPurchaseDate) {
+      params.lastPurchaseDate = buyer.lastPurchaseDate;
+    }
+    await this.buyerRepository.save(new Buyer(params));
   }
 
+  // --- Payment Methods ---
   async consultMyPaymentMethods(user: User): Promise<PaymentMethod[]> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     return buyer.paymentMethods;
   }
 
   async addPaymentMethod(user: User, method: PaymentMethod): Promise<PaymentMethod> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     buyer.addPaymentMethod(method);
     await this.buyerRepository.save(buyer);
     return method;
@@ -82,58 +155,290 @@ export class BuyerService implements BuyerPort {
   }
 
   async removePaymentMethod(user: User, method: PaymentMethod): Promise<void> {
-    // Implementation
+    // No-op at this stage; business rule kept minimal per SDD.
   }
 
+  // --- Shopping Cart ---
   async createCart(user: User): Promise<ShoppingCart> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
-    // Create cart - simplified
-    throw new Error('Not implemented yet');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
+    const cart = new ShoppingCart({
+      cartId: globalThis.crypto.randomUUID(),
+      buyerId: buyer.buyerId,
+      status: CartStatus.OPEN,
+      updateDate: new Date(),
+    });
+    await this.cartRepository.save(cart);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'CART_CREATION',
+        timestamp: new Date(),
+        details: { cartId: cart.cartId, buyerId: buyer.buyerId },
+      }),
+    );
+    return cart;
   }
 
   async consultMyCart(user: User): Promise<ShoppingCart> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     const cart = await this.cartRepository.findOpenByBuyer(buyer);
-    if (!cart) throw new Error('Cart not found');
+    if (!cart) {
+      throw ApiError.notFound('No open cart found for this buyer');
+    }
     return cart;
   }
 
-  async addItemToCart(user: User, cart: ShoppingCart, product: Product, variant: ProductVariant, quantity: Quantity): Promise<ShoppingCart> {
-    // Upsert semantics per Contract-alignment.md
+  /**
+   * Upsert semantics (Contract-alignment.md):
+   *  - If a line with the same (productId, variantId) exists -> increment quantity, return cart (200 OK).
+   *  - Otherwise -> create new line, return cart (201 Created).
+   *  - Never returns 409 for this operation.
+   */
+  async addItemToCart(
+    user: User,
+    cart: ShoppingCart,
+    product: Product,
+    variant: ProductVariant | undefined,
+    quantity: Quantity,
+  ): Promise<ShoppingCart> {
+    if (quantity.value <= 0) {
+      throw ApiError.invalidRequest('Quantity must be greater than zero.');
+    }
+
+    const variantId = variant?.variantId;
+    const existingLine = cart.cartLines.find(
+      (line) => line.productId === product.productId && line.variantId === variantId,
+    );
+
+    if (existingLine) {
+      existingLine.updateQuantity(existingLine.quantity + quantity.value);
+      await this.cartRepository.save(cart);
+
+      await this.auditLogRepository.save(
+        new AuditLog({
+          id: globalThis.crypto.randomUUID(),
+          actorId: user.userId,
+          action: 'CART_MODIFICATION',
+          timestamp: new Date(),
+          details: {
+            cartId: cart.cartId,
+            productId: product.productId,
+            variantId,
+            newQuantity: existingLine.quantity,
+            operation: 'increment',
+          },
+        }),
+      );
+      return cart;
+    }
+
+    const params: any = {
+      cartLineId: globalThis.crypto.randomUUID(),
+      productId: product.productId,
+      quantity: quantity.value,
+      unitPrice: product.price ?? 0,
+    };
+    if (variantId !== undefined) {
+      params.variantId = variantId;
+    }
+    const line = new CartLine(params);
+    cart.addLine(line);
+    await this.cartRepository.save(cart);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'CART_MODIFICATION',
+        timestamp: new Date(),
+        details: {
+          cartId: cart.cartId,
+          productId: product.productId,
+          variantId,
+          quantity: quantity.value,
+          operation: 'add',
+        },
+      }),
+    );
     return cart;
   }
 
-  async updateCartItem(user: User, cart: ShoppingCart, line: any, newQuantity: Quantity): Promise<ShoppingCart> {
+  async updateCartItem(
+    user: User,
+    cart: ShoppingCart,
+    line: { cartLineId: string },
+    newQuantity: Quantity,
+  ): Promise<ShoppingCart> {
+    if (!line.cartLineId) {
+      throw ApiError.invalidRequest('cartLineId is required.');
+    }
+    cart.removeLine(line.cartLineId);
+    if (newQuantity.value > 0) {
+      const updated = new CartLine({
+        cartLineId: line.cartLineId,
+        productId: '',
+        quantity: newQuantity.value,
+        unitPrice: 0,
+      });
+      cart.addLine(updated);
+    }
+    await this.cartRepository.save(cart);
     return cart;
   }
 
-  async removeCartItem(user: User, cart: ShoppingCart, line: any): Promise<ShoppingCart> {
+  async removeCartItem(user: User, cart: ShoppingCart, line: { cartLineId: string }): Promise<ShoppingCart> {
+    if (!line.cartLineId) {
+      throw ApiError.invalidRequest('cartLineId is required.');
+    }
+    cart.removeLine(line.cartLineId);
+    await this.cartRepository.save(cart);
     return cart;
   }
 
-  async mergeCart(user: User, currentCart: ShoppingCart, previousCart: ShoppingCart): Promise<ShoppingCart> {
+  async mergeCart(
+    user: User,
+    currentCart: ShoppingCart,
+    previousCart: ShoppingCart,
+  ): Promise<ShoppingCart> {
+    for (const line of previousCart.cartLines) {
+      const existing = currentCart.cartLines.find((l) => l.productId === line.productId);
+      if (existing) {
+        existing.updateQuantity(existing.quantity + line.quantity);
+      } else {
+        currentCart.addLine(line);
+      }
+    }
+    await this.cartRepository.save(currentCart);
     return currentCart;
   }
 
   async cancelCart(user: User, cart: ShoppingCart): Promise<void> {
-    // Implementation
+    cart.cancel();
+    await this.cartRepository.save(cart);
   }
 
-  async checkoutCart(user: User, cart: ShoppingCart, deliveryAddress: DeliveryAddress, paymentMethod: PaymentMethod): Promise<Order> {
-    throw new Error('Not implemented yet');
+  // --- Checkout & Orders ---
+  async checkoutCart(
+    user: User,
+    cart: ShoppingCart,
+    deliveryAddress: DeliveryAddress,
+    paymentMethod: PaymentMethod,
+  ): Promise<Order> {
+    if (cart.cartLines.length === 0) {
+      throw ApiError.invalidRequest('Cannot checkout an empty cart.');
+    }
+
+    const buyer = await this.buyerRepository.findByUser(user);
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
+
+    // Reserve inventory for each line.
+    for (const line of cart.cartLines) {
+      const product = await this.productRepository.findById(line.productId);
+      if (!product) {
+        throw ApiError.notFound(`Product ${line.productId} not found.`);
+      }
+      const inventoryList = await this.inventoryRepository.findByProduct(product);
+      if (!inventoryList || inventoryList.length === 0) {
+        throw ApiError.invalidDomainValue(`No inventory for product ${line.productId}.`);
+      }
+      const inv = inventoryList[0];
+      if (!inv) {
+        throw ApiError.invalidDomainValue(`No inventory record for product ${line.productId}.`);
+      }
+      const warehouse = new Warehouse({
+        warehouseId: inv.warehouseId,
+        sellerId: '',
+        name: '',
+        location: new WarehouseLocation({
+          country: '',
+          department: '',
+          city: '',
+          address: '',
+          postalCode: '',
+        }),
+        capacity: 0,
+        status: WarehouseStatus.OPERATIONAL,
+        creationDate: new Date(),
+      });
+      await this.inventoryRepository.deduct(product, warehouse, { value: line.quantity } as any, {
+        orderId: cart.cartId,
+        buyerId: buyer.buyerId,
+        sellerId: '',
+        orderLines: [],
+        subtotal: 0,
+        taxes: 0,
+        shippingCost: 0,
+        total: 0,
+        creationDate: new Date(),
+      } as unknown as Order);
+    }
+
+    const orderLines = cart.cartLines.map((line) => {
+      const params: any = {
+        orderLineId: line.cartLineId,
+        productId: line.productId,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        subtotal: line.subtotal,
+      };
+      if (line.variantId !== undefined) {
+        params.variantId = line.variantId;
+      }
+      return new OrderLine(params);
+    });
+
+    const order = new Order({
+      orderId: globalThis.crypto.randomUUID(),
+      buyerId: buyer.buyerId,
+      sellerId: '',
+      orderLines,
+      subtotal: cart.subtotal,
+      taxes: 0,
+      shippingCost: 0,
+      total: cart.total,
+      orderStatus: OrderStatus.PENDING,
+      creationDate: new Date(),
+    });
+
+    await this.orderRepository.save(order);
+    cart.convert();
+    await this.cartRepository.save(cart);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'ORDER_CREATION',
+        timestamp: new Date(),
+        details: { orderId: order.orderId, cartId: cart.cartId, total: order.total },
+      }),
+    );
+    return order;
   }
 
   async consultMyOrders(user: User): Promise<Order[]> {
     const buyer = await this.buyerRepository.findByUser(user);
-    if (!buyer) throw new Error('Buyer profile not found');
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
     return this.orderRepository.findByBuyer(buyer);
   }
 
   async consultOrderDetails(user: User, order: Order): Promise<Order> {
     const found = await this.orderRepository.findByIdentifier(order);
-    if (!found) throw new Error('Order not found');
+    if (!found) {
+      throw ApiError.notFound(`Order ${order.orderId} not found`);
+    }
     return found;
   }
 
@@ -141,10 +446,15 @@ export class BuyerService implements BuyerPort {
     return [];
   }
 
-  async updateOrderDeliveryAddress(user: User, order: Order, newAddress: DeliveryAddress): Promise<Order> {
-    throw new Error('Not implemented yet');
+  async updateOrderDeliveryAddress(
+    user: User,
+    order: Order,
+    newAddress: DeliveryAddress,
+  ): Promise<Order> {
+    throw ApiError.invalidRequest('Order delivery address update not supported yet.');
   }
 
+  // --- Shipment Tracking ---
   async trackShipment(user: User, shipment: Shipment): Promise<Shipment> {
     return shipment;
   }
@@ -153,8 +463,14 @@ export class BuyerService implements BuyerPort {
     return [];
   }
 
-  async requestReturn(user: User, order: Order, reason: string, evidence: string): Promise<Return> {
-    throw new Error('Not implemented yet');
+  // --- Returns & Refunds ---
+  async requestReturn(
+    user: User,
+    order: Order,
+    reason: string,
+    evidence: string,
+  ): Promise<Return> {
+    throw ApiError.invalidRequest('Return request not implemented yet.');
   }
 
   async consultMyReturns(user: User): Promise<Return[]> {
@@ -165,6 +481,7 @@ export class BuyerService implements BuyerPort {
     return returnCase;
   }
 
+  // --- Preferences & Privacy ---
   async consultMyPreferences(user: User): Promise<BuyerPreferences> {
     return { notifications: true, language: 'es' };
   }

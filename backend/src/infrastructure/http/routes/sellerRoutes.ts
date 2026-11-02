@@ -1,0 +1,125 @@
+/**
+ * Routes: Seller
+ * All endpoints require authentication and SELLER role.
+ */
+import type { Request, Response } from 'express';
+import { Router } from 'express';
+import type { RequestHandler } from 'express';
+import { SellerController } from '../controllers/SellerController.js';
+import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { requireRole } from '../middlewares/requireRole.js';
+
+export function createSellerRoutes(
+  sellerController: SellerController,
+  authMiddleware: RequestHandler,
+): Router {
+  const router = Router();
+
+  // Profile
+  router.get(
+    '/seller/profile',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMyProfile(req, res),
+    ),
+  );
+  router.put(
+    '/seller/profile',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.updateMyProfile(req, res),
+    ),
+  );
+
+  // Warehouses
+  router.get(
+    '/seller/warehouses',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMyWarehouses(req, res),
+    ),
+  );
+  router.post(
+    '/seller/warehouses',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.registerWarehouse(req, res),
+    ),
+  );
+
+  // Products
+  router.post(
+    '/seller/products',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.createProduct(req, res),
+    ),
+  );
+  router.post(
+    '/seller/products/:productId/publish',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.publishProduct(req, res),
+    ),
+  );
+  router.post(
+    '/seller/products/:productId/variants',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.addProductVariant(req, res),
+    ),
+  );
+
+  // Inventory
+  router.get(
+    '/seller/inventory',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMyInventory(req, res),
+    ),
+  );
+  router.post(
+    '/seller/inventory/stock-entry',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.registerStockEntry(req, res),
+    ),
+  );
+
+  // Orders
+  router.get(
+    '/seller/orders',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMyOrdersForFulfillment(req, res),
+    ),
+  );
+  router.post(
+    '/seller/orders/:orderId/approve',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.approveOrder(req, res),
+    ),
+  );
+  router.post(
+    '/seller/orders/:orderId/prepare',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.prepareOrder(req, res),
+    ),
+  );
+
+  return router;
+}

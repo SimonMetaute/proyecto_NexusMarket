@@ -185,3 +185,31 @@ export function requirePathParam(value: string | undefined, field: string): stri
   }
   return value.trim();
 }
+
+/**
+ * Express types `req.params` values as `string | string[]`. This helper
+ * normalizes them to a single string.
+ */
+export function getParam(value: string | string[] | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
+/**
+ * Reads a required path parameter, normalizing `string | string[]`.
+ */
+export function requireParam(
+  value: string | string[] | undefined,
+  field: string,
+): string {
+  const v = getParam(value);
+  if (v === undefined || v.trim().length === 0) {
+    throw new ValidationError(field, 'Parameter is required.');
+  }
+  return v.trim();
+}
