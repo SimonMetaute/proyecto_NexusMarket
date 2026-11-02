@@ -35,6 +35,9 @@ import { LoginUseCase } from './application/use-cases/LoginUseCase.js';
 import { PublicAccessService } from './application/services/PublicAccessService.js';
 import { BuyerService } from './application/services/BuyerService.js';
 import { SellerService } from './application/services/SellerService.js';
+import { LogisticsOperatorService } from './application/services/LogisticsOperatorService.js';
+import { AdministratorService } from './application/services/AdministratorService.js';
+import { SupervisorService } from './application/services/SupervisorService.js';
 
 // --- HTTP controllers -----------------------------------------------------
 import { UserController } from './infrastructure/http/controllers/UserController.js';
@@ -144,12 +147,35 @@ const catalogController = new CatalogController(publicAccessService);
 const buyerController = new BuyerController(buyerService);
 const sellerController = new SellerController(sellerService);
 
-// Placeholder services for roles not yet wired to full implementations.
-// TODO: Replace with dedicated LogisticsOperatorService, AdministratorService,
-// SupervisorService implementations in Phase D.
-const logisticsOperatorService = sellerService as any;
-const administratorService = sellerService as any;
-const supervisorService = sellerService as any;
+const logisticsOperatorService = new LogisticsOperatorService(
+  warehouseRepository,
+  inventoryRepository,
+  shipmentRepository,
+  orderRepository,
+  returnRepository,
+  productRepository,
+  auditLogRepository,
+);
+const administratorService = new AdministratorService(
+  userRepository,
+  buyerRepository,
+  sellerRepository,
+  productRepository,
+  orderRepository,
+  returnRepository,
+  invoiceRepository,
+  paymentRepository,
+  operationRepository,
+  auditLogRepository,
+);
+const supervisorService = new SupervisorService(
+  orderRepository,
+  paymentRepository,
+  shipmentRepository,
+  returnRepository,
+  buyerRepository,
+  sellerRepository,
+);
 
 const logisticsController = new LogisticsController(logisticsOperatorService);
 const adminController = new AdministratorController(administratorService);

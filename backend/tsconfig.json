@@ -42,5 +42,6 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+  "exclude": ["tests", ".seed-admin.ts", "Dockerfile", ".smoke-*.ts", ".check-*.ts"]
 }
