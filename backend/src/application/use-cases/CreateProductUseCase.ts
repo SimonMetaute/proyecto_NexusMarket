@@ -16,6 +16,7 @@
  *    (SDD Section 2.6) at this layer, since it requires querying persistence.
  */
 import { Product } from '../../domain/entities/Product.js';
+import type { ProductCategory, ProductStatus } from '../../domain/model/enums.js';
 import type { ProductRepository } from '../../domain/ports/out/ProductRepository.js';
 
 /**
@@ -29,6 +30,12 @@ export interface CreateProductParams {
   price: number;
   sellerId: string;
   stock: number;
+  category?: ProductCategory;
+  sku?: string;
+  basePrice?: number;
+  productStatus?: ProductStatus;
+  publicationDate?: Date;
+  brand?: string;
 }
 
 /**
@@ -73,7 +80,7 @@ export class CreateProductUseCase {
     }
 
     // 2. Build the domain aggregate (system-generated fields use built-ins).
-    const product = new Product({
+    const productParams: any = {
       productId: globalThis.crypto.randomUUID(),
       name: params.name,
       description: params.description,
@@ -81,7 +88,15 @@ export class CreateProductUseCase {
       sellerId: params.sellerId,
       stock: params.stock,
       createdAt: new Date(),
-    });
+    };
+    if (params.category !== undefined) productParams.category = params.category;
+    if (params.sku !== undefined) productParams.sku = params.sku;
+    if (params.basePrice !== undefined) productParams.basePrice = params.basePrice;
+    if (params.productStatus !== undefined) productParams.productStatus = params.productStatus;
+    if (params.publicationDate !== undefined) productParams.publicationDate = params.publicationDate;
+    if (params.brand !== undefined) productParams.brand = params.brand;
+
+    const product = new Product(productParams);
 
     // 3. Persist through the injected port.
     await this.productRepository.save(product);

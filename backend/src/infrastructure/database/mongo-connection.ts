@@ -1,7 +1,8 @@
 import { MongoClient } from 'mongodb';
 import type { Db } from 'mongodb';
+import { appConfig } from '../config/appConfig.js';
 
-const MONGO_URI = process.env.MONGO_URI ?? 'mongodb://localhost:27017/audit_db';
+const MONGO_URI = appConfig.mongo.uri;
 
 let client: MongoClient | null = null;
 let db: Db | null = null;

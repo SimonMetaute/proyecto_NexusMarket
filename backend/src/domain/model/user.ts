@@ -12,6 +12,8 @@
  *    DateTime -> Date
  */
 
+import { UserRole } from './enums.js';
+
 /**
  * Attribute: userType (Enum).
  * The SDD states it "Can be Buyer, Seller, or Administrator".
@@ -21,6 +23,42 @@ export enum UserType {
   Buyer = 'Buyer',
   Seller = 'Seller',
   Administrator = 'Administrator',
+}
+
+const ROLE_BY_USER_TYPE: Record<string, UserRole> = {
+  [UserType.Buyer]: UserRole.BUYER,
+  [UserType.Seller]: UserRole.SELLER,
+  [UserType.Administrator]: UserRole.ADMINISTRATOR,
+};
+
+/**
+ * Maps the persisted `userType` to the canonical authorization role used by
+ * `SDD/Adapters/Api-rest-endpoints.md` (`BUYER|SELLER|LOGISTICS_OPERATOR|
+ * ADMINISTRATOR|SUPERVISOR`).
+ *
+ * `LOGISTICS_OPERATOR` and `SUPERVISOR` are not representable by the legacy
+ * `UserType` enum yet; the function accepts them verbatim so employee accounts
+ * can be issued tokens once the aggregate is aligned.
+ */
+export function resolveUserRole(userType: UserType | string): UserRole {
+  const raw = String(userType);
+  const direct = Object.values(UserRole).find((role) => role === raw);
+  if (direct !== undefined) {
+    return direct;
+  }
+  return ROLE_BY_USER_TYPE[raw] ?? (raw.toUpperCase() as UserRole);
+}
+
+/**
+ * Derives the token `username` from the account email (local part), which is
+ * the only stable human-readable identifier available on the current `User`
+ * aggregate. Documented here to avoid divergent implementations across
+ * adapters.
+ */
+export function deriveUsername(email: string): string {
+  const trimmed = email.trim();
+  const localPart = trimmed.split('@')[0];
+  return localPart !== undefined && localPart.length > 0 ? localPart : trimmed;
 }
 
 /**

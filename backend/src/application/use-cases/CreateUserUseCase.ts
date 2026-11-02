@@ -15,11 +15,11 @@
  *  - Enforces the business rule "Email must be unique in the system."
  *    (SDD Section 2.1) at this layer, since it requires querying persistence.
  */
-import bcrypt from 'bcrypt';
 import { User, IdentityDocument, UserType } from '../../domain/model/user.js';
 import { AuditLog } from '../../domain/model/AuditLog.js';
 import type { UserRepository } from '../../domain/ports/out/UserRepository.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
+import type { PasswordServicePort } from '../../domain/ports/out/PasswordServicePort.js';
 
 /**
  * Input data for creating a user.
@@ -53,15 +53,21 @@ export class EmailAlreadyExistsError extends Error {
 export class CreateUserUseCase {
   private readonly userRepository: UserRepository;
   private readonly auditLogRepository: AuditLogRepository;
+  private readonly passwordService: PasswordServicePort;
 
   /**
    * The ports are injected through the constructor. The concrete implementations
    * (e.g. an in-memory, SQL, or NoSQL adapter) are provided by the caller,
    * keeping this use case pure and testable.
    */
-  constructor(userRepository: UserRepository, auditLogRepository: AuditLogRepository) {
+  constructor(
+    userRepository: UserRepository,
+    auditLogRepository: AuditLogRepository,
+    passwordService: PasswordServicePort,
+  ) {
     this.userRepository = userRepository;
     this.auditLogRepository = auditLogRepository;
+    this.passwordService = passwordService;
   }
 
   /**
@@ -82,7 +88,7 @@ export class CreateUserUseCase {
 
     // 2. Build the domain aggregate (system-generated fields use built-ins).
     const now = new Date();
-    const passwordHash = await bcrypt.hash(params.password, 10);
+    const passwordHash = await this.passwordService.hash(params.password);
     const user = new User({
       userId: globalThis.crypto.randomUUID(),
       userType: params.userType,

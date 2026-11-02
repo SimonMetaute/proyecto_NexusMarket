@@ -1,24 +1,35 @@
 import type { Request, Response } from 'express';
 import type { LoginUseCase } from '../../../application/use-cases/LoginUseCase.js';
-import { InvalidCredentialsError } from '../../../application/use-cases/LoginUseCase.js';
+import type { JwtServicePort } from '../../../domain/ports/out/JwtServicePort.js';
+import { ApiError } from '../errors/ApiError.js';
+import { extractBearerToken } from '../middlewares/auth.js';
+import { requireEmail, requireObject, requireString } from '../validation/validator.js';
 
 export class AuthController {
   private readonly loginUseCase: LoginUseCase;
+  private readonly jwtService: JwtServicePort;
 
-  constructor(loginUseCase: LoginUseCase) {
+  constructor(loginUseCase: LoginUseCase, jwtService: JwtServicePort) {
     this.loginUseCase = loginUseCase;
+    this.jwtService = jwtService;
   }
 
   async login(req: Request, res: Response): Promise<void> {
-    try {
-      const result = await this.loginUseCase.execute(req.body);
-      res.status(200).json(result);
-    } catch (error) {
-      if (error instanceof InvalidCredentialsError) {
-        res.status(401).json({ message: error.message });
-      } else {
-        res.status(400).json({ message: error instanceof Error ? error.message : 'Bad Request' });
-      }
+    const body = requireObject(req.body);
+    const email = requireEmail(body);
+    const password = requireString(body, 'password', { minLength: 1, maxLength: 128 });
+
+    const result = await this.loginUseCase.execute({ email, password });
+    res.status(200).json(result);
+  }
+
+  async logout(req: Request, res: Response): Promise<void> {
+    const token = extractBearerToken(req);
+    if (token === null) {
+      throw ApiError.authenticationRequired();
     }
+
+    await this.jwtService.revoke(token);
+    res.status(204).send();
   }
 }
