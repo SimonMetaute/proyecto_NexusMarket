@@ -12,6 +12,7 @@ export function createAuthRoutes(
 
   // Public (SDD/Adapters/Api-rest-endpoints.md §2).
   router.post('/auth/login', asyncHandler((req: Request, res: Response) => authController.login(req, res)));
+  router.post('/auth/register/buyer', asyncHandler((req: Request, res: Response) => authController.registerBuyer(req, res)));
 
   // Requires a valid token; any role.
   router.post(

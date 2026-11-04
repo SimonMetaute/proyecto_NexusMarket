@@ -5,6 +5,7 @@
 import type { Request, Response } from 'express';
 import type { SellerPort } from '../../../domain/ports/in/SellerPort.js';
 import type { User } from '../../../domain/model/user.js';
+import { WarehouseStatus } from '../../../domain/model/enums.js';
 import { ApiError } from '../errors/ApiError.js';
 import {
   optionalString,
@@ -17,6 +18,12 @@ import {
   requireEnum,
 } from '../validation/validator.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { Seller } from '../../../domain/entities/Seller.js';
+import { Warehouse } from '../../../domain/entities/Warehouse.js';
+import { Product } from '../../../domain/entities/Product.js';
+import { ProductVariant } from '../../../domain/entities/ProductVariant.js';
+import { Inventory } from '../../../domain/entities/Inventory.js';
+import { WarehouseLocation } from '../../../domain/model/value-objects.js';
 
 function asString(value: string | string[] | undefined): string | undefined {
   if (value === undefined) {
@@ -74,7 +81,7 @@ export class SellerController {
     }
     const updated = await this.sellerService.updateMyProfile(
       user,
-      new (require('../../../domain/entities/Seller.js').Seller)(params),
+      new Seller(params),
     );
     res.status(200).json({
       sellerId: updated.sellerId,
@@ -103,11 +110,11 @@ export class SellerController {
     const user = this.requireUser(req);
     const body = requireObject(req.body);
     const seller = await this.sellerService.consultMyProfile(user);
-    const warehouse = new (require('../../../domain/entities/Warehouse.js').Warehouse)({
+    const warehouse = new Warehouse({
       warehouseId: requireString(body, 'warehouseId', { maxLength: 36 }),
       sellerId: seller.sellerId,
       name: requireString(body, 'name', { maxLength: 255 }),
-      location: new (require('../../../domain/model/value-objects.js').WarehouseLocation)({
+      location: new WarehouseLocation({
         country: requireString(body, 'country', { maxLength: 100 }),
         department: requireString(body, 'department', { maxLength: 100 }),
         city: requireString(body, 'city', { maxLength: 100 }),
@@ -119,7 +126,7 @@ export class SellerController {
         'Operational',
         'Closed',
         'Maintenance',
-      ]),
+      ]) as WarehouseStatus,
       creationDate: new Date(),
     });
     const created = await this.sellerService.registerWarehouse(user, warehouse);
@@ -165,7 +172,7 @@ export class SellerController {
         'Draft', 'Published', 'Inactive', 'Suspended', 'OutOfStock',
       ]);
     }
-    const product = new (require('../../../domain/entities/Product.js').Product)({
+    const product = new Product({
       productId: globalThis.crypto.randomUUID(),
       ...params,
       createdAt: new Date(),
@@ -204,7 +211,7 @@ export class SellerController {
     const user = this.requireUser(req);
     const productId = requireParam(asString(req.params.productId), 'productId');
     const body = requireObject(req.body);
-    const variant = new (require('../../../domain/entities/ProductVariant.js').ProductVariant)({
+    const variant = new ProductVariant({
       variantId: requireString(body, 'variantId', { maxLength: 36 }),
       productId,
       attribute: requireString(body, 'attribute', { maxLength: 100 }),
@@ -252,24 +259,24 @@ export class SellerController {
       stock: 0,
       createdAt: new Date(),
     } as any;
-    const warehouse = new (require('../../../domain/entities/Warehouse.js').Warehouse)({
+    const warehouse = new Warehouse({
       warehouseId,
       sellerId: '',
       name: '',
-      location: new (require('../../../domain/model/value-objects.js').WarehouseLocation)({
+      location: new WarehouseLocation({
         country: '', department: '', city: '', address: '', postalCode: '',
       }),
       capacity: 0,
       status: 'Operational',
       creationDate: new Date(),
     } as any);
-    const inventory = new (require('../../../domain/entities/Inventory.js').Inventory)({
+    const inventory = new Inventory({
       inventoryId: globalThis.crypto.randomUUID(),
       productId,
       warehouseId,
-      availableStock: quantity,
+      availableStock: 0,
       reservedStock: 0,
-      totalStock: quantity,
+      totalStock: 0,
       updateDate: new Date(),
     } as any);
     const updated = await this.sellerService.registerStockEntry(

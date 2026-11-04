@@ -17,7 +17,7 @@ export interface SearchCriteria {
 export interface PublicAccessPort {
   login(email: string, password: string): Promise<User>;
   logout(user: User): Promise<void>;
-  registerBuyer(buyer: Buyer): Promise<User>;
+  registerBuyer(buyer: Buyer, password: string): Promise<User>;
   searchPublicCatalog(criteria: SearchCriteria): Promise<Product[]>;
   consultPublicProductDetails(product: Product): Promise<Product>;
 }

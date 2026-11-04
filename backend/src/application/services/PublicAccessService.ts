@@ -70,7 +70,7 @@ export class PublicAccessService implements PublicAccessPort {
     );
   }
 
-  async registerBuyer(buyer: Buyer): Promise<User> {
+  async registerBuyer(buyer: Buyer, password: string): Promise<User> {
     const email = buyer.userId;
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser !== null) {
@@ -79,13 +79,14 @@ export class PublicAccessService implements PublicAccessPort {
 
     const userId = globalThis.crypto.randomUUID();
     const firstPart = email.split('@')[0] ?? email;
+    const passwordHash = await this.passwordService.hash(password);
     const user = new User({
       userId,
       userType: UserType.Buyer,
       firstName: firstPart,
       lastName: firstPart,
       email,
-      password: '',
+      password: passwordHash,
       phone: '',
       identityDocument: new IdentityDocument('Citizenship Card', email),
       registrationDate: new Date(),
@@ -94,7 +95,17 @@ export class PublicAccessService implements PublicAccessPort {
     });
 
     await this.userRepository.save(user);
-    await this.buyerRepository.save(buyer);
+
+    // El buyer debe usar el mismo userId del usuario creado para que
+    // findByUser() lo encuentre al consultar el perfil.
+    const buyerWithUserId = new Buyer({
+      buyerId: buyer.buyerId,
+      userId: user.userId,
+      deliveryAddresses: buyer.deliveryAddresses,
+      paymentMethods: buyer.paymentMethods,
+      trustLevel: buyer.trustLevel,
+    });
+    await this.buyerRepository.save(buyerWithUserId);
 
     await this.auditLogRepository.save(
       new AuditLog({

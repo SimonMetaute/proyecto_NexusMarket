@@ -247,10 +247,10 @@ export class BuyerController {
         ? new ProductVariant({
             variantId,
             productId: product.productId,
-            attribute: '',
-            value: '',
-            additionalPrice: 0,
-            skuVariant: '',
+            attribute: requireString(body, 'attribute', { maxLength: 100 }),
+            value: requireString(body, 'value', { maxLength: 255 }),
+            additionalPrice: optionalNumber(body, 'additionalPrice') ?? 0,
+            skuVariant: requireString(body, 'skuVariant', { maxLength: 100 }),
           })
         : undefined;
 

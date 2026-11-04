@@ -280,16 +280,13 @@ export class BuyerService implements BuyerPort {
     if (!line.cartLineId) {
       throw ApiError.invalidRequest('cartLineId is required.');
     }
-    cart.removeLine(line.cartLineId);
-    if (newQuantity.value > 0) {
-      const updated = new CartLine({
-        cartLineId: line.cartLineId,
-        productId: '',
-        quantity: newQuantity.value,
-        unitPrice: 0,
-      });
-      cart.addLine(updated);
+
+    const existingLine = cart.cartLines.find((l) => l.cartLineId === line.cartLineId);
+    if (!existingLine) {
+      throw ApiError.notFound(`Cart line ${line.cartLineId} not found`);
     }
+
+    existingLine.updateQuantity(newQuantity.value);
     await this.cartRepository.save(cart);
     return cart;
   }
@@ -370,7 +367,7 @@ export class BuyerService implements BuyerPort {
         status: WarehouseStatus.OPERATIONAL,
         creationDate: new Date(),
       });
-      await this.inventoryRepository.deduct(product, warehouse, { value: line.quantity } as any, {
+      await this.inventoryRepository.reserve(product, warehouse, { value: line.quantity } as any, {
         orderId: cart.cartId,
         buyerId: buyer.buyerId,
         sellerId: '',
