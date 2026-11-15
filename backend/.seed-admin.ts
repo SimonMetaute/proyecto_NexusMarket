@@ -11,7 +11,7 @@ import { initDb } from './src/infrastructure/database/init-db.js';
 import { initMongo } from './src/infrastructure/database/mongo-connection.js';
 import { MySQLUserRepository } from './src/infrastructure/repositories/MySQLUserRepository.js';
 import { MongoAuditLogRepository } from './src/infrastructure/repositories/MongoAuditLogRepository.js';
-import { BcryptPasswordService } from './infrastructure/security/BcryptPasswordService.js';
+import { BcryptPasswordService } from './src/infrastructure/security/BcryptPasswordService.js';
 import { CreateUserUseCase } from './application/use-cases/CreateUserUseCase.js';
 import { UserType } from './src/domain/model/user.js';
 import { IdentityDocument } from './src/domain/model/user.js';
