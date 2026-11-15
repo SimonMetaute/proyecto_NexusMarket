@@ -1,0 +1,45 @@
+{
+  "name": "nexusmarket-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n buyer,seller,admin,logistics -c cyan,green,magenta,yellow \"npm:dev:buyer\" \"npm:dev:seller\" \"npm:dev:admin\" \"npm:dev:logistics\"",
+    "dev:buyer": "npm run dev -w @nexus/buyer",
+    "dev:seller": "npm run dev -w @nexus/seller",
+    "dev:admin": "npm run dev -w @nexus/admin",
+    "dev:logistics": "npm run dev -w @nexus/logistics",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "preview:buyer": "npm run preview -w @nexus/buyer",
+    "preview:seller": "npm run preview -w @nexus/seller",
+    "preview:admin": "npm run preview -w @nexus/admin",
+    "preview:logistics": "npm run preview -w @nexus/logistics"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.7",
+    "axios": "^1.7.9",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1",
+    "tailwind-merge": "^2.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5"
+  }
+}

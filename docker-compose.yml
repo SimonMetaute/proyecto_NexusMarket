@@ -1,4 +1,4 @@
-version: '3.8'
+﻿version: '3.8'
 
 services:
   mysql-db:
@@ -56,7 +56,7 @@ services:
       JWT_SECRET: change-me-in-production
       JWT_EXPIRES_IN_SECONDS: 3600
       BCRYPT_SALT_ROUNDS: 10
-      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -68,6 +68,9 @@ services:
     command: sh -c "npm ci && npm run dev"
     ports:
       - "5173:5173"
+      - "5174:5174"
+      - "5175:5175"
+      - "5176:5176"
     volumes:
       - ./frontend:/app
     depends_on:
@@ -77,3 +80,4 @@ services:
 volumes:
   nexusmarket_mysql_data:
   nexusmarket_mongo_data:
+

@@ -148,6 +148,9 @@ Producto de catálogo:
 Reglas relevantes:
 - Sin carrito abierto, `GET /buyer/cart` → `404`. Crear con `POST /buyer/cart` antes de agregar ítems.
 - `POST /buyer/cart/items` es upsert: `201` línea nueva, `200` si ya existía, **nunca 409**.
+- `subtotal`/`total` se recalculan desde las líneas en cada alta, incremento y merge (`ShoppingCart.recalculate()`); una respuesta ya no puede devolver totales obsoletos.
+- `PUT /buyer/cart/items/:cartLineId` devuelve sólo `{ cartId, cartLines[] }`. La UI invalida la query y reconsulta `GET /buyer/cart` para obtener los totales vigentes.
+- `GET`/`PUT /buyer/profile` serializan `deliveryAddresses[]` y `paymentMethods[]` en camelCase (`addressId`, `maskedNumber`, `isDefault`, ...) mediante `http/mappers/BuyerMapper.ts`; no se exponen campos internos (`_addressId`, ...).
 - Carrito con productos de varios vendedores → `422`; carrito vacío en checkout → `400`.
 - Stock insuficiente en checkout → `422 INVALID_DOMAIN_VALUE`.
 - Checkout no es idempotente de forma explícita: un segundo checkout del mismo carrito devuelve `422`/`400` (nunca duplica el pedido en la práctica).
@@ -187,6 +190,10 @@ Notas:
 | GET | `/admin/dashboard` | — | `200 { activeOrders: 0, totalSales: 0 }` (**stub**) |
 | GET | `/supervisor/dashboard` | — | `200 { activeOrders: 0, totalSales: 0 }` (**stub**, rol `SUPERVISOR`) |
 | GET | `/supervisor/health` | — | `200 { status: "OK", uptime: 99.9 }` (**stub**, rol `SUPERVISOR`) |
+
+Reglas relevantes:
+- `approve`/`reject` reciben sólo `sellerId` en la ruta; el servicio recarga el agregado desde el repositorio antes de aplicar la transición, de modo que `approvalDate` y el resto de campos persistidos no se pierden.
+- `sellerId` inexistente → `404 RESOURCE_NOT_FOUND` (antes fallaba con `500` por invocar métodos de dominio sobre un objeto plano).
 
 ### 2.5 Portal Logística (`5176`)
 
@@ -278,6 +285,7 @@ Notas:
 | Variante | producto inexistente | `404 RESOURCE_NOT_FOUND` |
 | Stock entry | bodega/producto inexistente | `404 RESOURCE_NOT_FOUND` |
 | Orden seller | pedido inexistente o de otro vendedor | `404` / `403` |
+| Admin approve/reject | `sellerId` inexistente | `404 RESOURCE_NOT_FOUND` |
 
 ---
 
@@ -288,14 +296,14 @@ Estas brechas están confirmadas en `backend/src` y condicionan la Fase 3. Se re
 1. **Audit logs (`/audit-logs`):** no existe endpoint. `AdministratorService.consultAuditLogs` devuelve `[]` y no está expuesto en rutas. La consola de auditoría no puede implementarse contra la API real todavía.
 2. **Gestión de usuarios (`/users`):** `GET /admin/users` devuelve siempre `[]` (`UserRepository` no tiene `findAll`). La tabla de usuarios mostrará estado vacío.
 3. **Onboarding atómico seller+bodega:** no existe endpoint transaccional. Solo `POST /users` (crea usuario `Seller` sin perfil verificado) y `POST /seller/warehouses` (requiere sesión SELLER). El flujo del SDD no es reproducible en una sola operación.
-4. **Productos del vendedor:** no hay `GET /seller/products` ni edición/borrado. El listado debe derivarse de `GET /catalog/products` (solo publicados) y de los IDs creados en la sesión; no se pueden mostrar borradores persistidos.
+4. **Productos del vendedor:** no hay `GET /seller/products` ni edición/borrado. El listado se deriva de `GET /catalog/products` y se filtra en cliente por `seller.sellerId`; el catálogo **no** acepta un filtro `sellerId` y devuelve también productos en estado distinto de `Published` (verificado). Los borradores persistidos sólo son visibles si el catálogo los incluye.
 5. **Imágenes de producto:** no existe campo ni endpoint de imágenes. La vista usará placeholder.
 6. **Variantes en catálogo:** el detalle público no incluye variantes; solo se pueden crear desde seller y no hay GET de variantes.
 7. **Cola de despacho y envíos:** no hay `GET /logistics/shipments` ni listado de órdenes confirmadas. `dispatch`/`confirm-delivery` operan por `shipmentId`, pero el frontend no puede descubrir ese ID desde la API.
 8. **Devoluciones:** `POST /buyer/returns` no existe (`BuyerService` lanza "not implemented"). El botón se mostrará deshabilitado con mensaje de funcionalidad no disponible.
 9. **Settlements / tienda / dashboard reales:** `GET /seller/store`, `GET /seller/settlements`, `GET /admin/dashboard` y `GET /supervisor/*` son stubs o no están expuestos (`activeOrders: 0`, `totalSales: 0`, `status: "OK"`).
 10. **Pago simulado:** no hay pasarela ni endpoint de pago. El checkout responde `201` (orden creada) o un error de dominio. Los tres estados del SDD se mapearán así: `201` → aprobado; `4xx` (400/409/422) → rechazado con mensaje del backend; timeout de red o `5xx` → resultado desconocido / pendiente de verificación. Nunca se declarará éxito sin `201`.
-11. **Serialización de entidades:** corregido en Fase 1 para `GET /seller/inventory`, `GET /seller/warehouses` y `GET /logistics/warehouses` (antes devolvían campos `_inventoryId`, `_warehouseId` y `location._country`, ...). El mapeo vive en `http/mappers/WarehouseMapper.ts`. Si se expone `GET /admin/users` en el futuro, debe mapearse para no filtrar `_password`.
+11. **Serialización de entidades:** corregido para `GET /seller/inventory`, `GET /seller/warehouses`, `GET /logistics/warehouses` (`http/mappers/WarehouseMapper.ts`) y para `GET/PUT /buyer/profile`, `GET /buyer/addresses`, `GET /buyer/payment-methods` (`http/mappers/BuyerMapper.ts`). Antes se filtraban campos `_inventoryId`, `_warehouseId`, `location._country`, `_addressId`, `_maskedNumber`, ... Si se expone `GET /admin/users` en el futuro, debe mapearse para no filtrar `_password`.
 
 ---
 
