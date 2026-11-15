@@ -15,7 +15,9 @@ export async function initMongo(): Promise<Db> {
   if (db !== null) {
     return db;
   }
-  client = new MongoClient(MONGO_URI);
+  client = new MongoClient(MONGO_URI, {
+    serverSelectionTimeoutMS: appConfig.mongo.serverSelectionTimeoutMs,
+  });
   await client.connect();
   db = client.db();
   return db;
@@ -30,4 +32,8 @@ export function getAuditDb(): Db {
     throw new Error('MongoDB not initialized. Call initMongo() first.');
   }
   return db;
+}
+
+export function isMongoInitialized(): boolean {
+  return db !== null;
 }

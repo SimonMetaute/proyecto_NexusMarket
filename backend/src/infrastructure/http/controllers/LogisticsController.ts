@@ -7,14 +7,12 @@ import type { LogisticsOperatorPort } from '../../../domain/ports/in/LogisticsOp
 import type { User } from '../../../domain/model/user.js';
 import { ApiError } from '../errors/ApiError.js';
 import {
-  optionalString,
   requireObject,
   requireString,
   requireParam,
-  requireNumber,
   requirePositiveInt,
 } from '../validation/validator.js';
-import { asyncHandler } from '../middlewares/asyncHandler.js';
+import { Inventory } from '../../../domain/entities/Inventory.js';
 
 function asString(value: string | string[] | undefined): string | undefined {
   if (value === undefined) {
@@ -51,24 +49,23 @@ export class LogisticsController {
     const warehouseId = requireString(body, 'warehouseId', { maxLength: 36 });
     const quantity = requirePositiveInt(body, 'quantity');
     const receiptReference = requireString(body, 'receiptReference', { maxLength: 255 });
-    const product = {
-      productId,
-      name: '', description: '', sellerId: '', price: 0, stock: 0, createdAt: new Date(),
-    } as any;
-    const warehouse = new (require('../../../domain/entities/Warehouse.js').Warehouse)({
-      warehouseId, sellerId: '', name: '',
-      location: new (require('../../../domain/model/value-objects.js').WarehouseLocation)({
-        country: '', department: '', city: '', address: '', postalCode: '',
-      }),
-      capacity: 0, status: 'Operational', creationDate: new Date(),
-    } as any);
-    const inventory = new (require('../../../domain/entities/Inventory.js').Inventory)({
+
+    // The service reloads the Product and Warehouse aggregates, verifies they
+    // exist and creates/increments inventory atomically by (product, warehouse).
+    const inventory = new Inventory({
       inventoryId: globalThis.crypto.randomUUID(),
-      productId, warehouseId, availableStock: quantity, reservedStock: 0, totalStock: quantity,
+      productId,
+      warehouseId,
+      availableStock: 0,
+      reservedStock: 0,
+      totalStock: 0,
       updateDate: new Date(),
-    } as any);
+    });
     const updated = await this.logisticsService.registerStockEntry(
-      user, inventory, { value: quantity }, receiptReference,
+      user,
+      inventory,
+      { value: quantity },
+      receiptReference,
     );
     res.status(200).json({
       inventoryId: updated.inventoryId,
@@ -80,19 +77,9 @@ export class LogisticsController {
   async dispatchShipment(req: Request, res: Response): Promise<void> {
     const user = this.requireUser(req);
     const shipmentId = requireParam(asString(req.params.shipmentId), 'shipmentId');
-    const shipment = {
-      shipmentId, orderId: '', warehouseId: '',
-      deliveryAddress: new (require('../../../domain/model/value-objects.js').DeliveryAddress)({
-        addressId: '', country: '', department: '', city: '', neighborhood: '',
-        address: '', postalCode: '', reference: '',
-      }),
-      carrier: new (require('../../../domain/entities/Shipment.js').Carrier)({
-        carrierId: '', name: '', serviceType: '',
-      }),
-      trackingCode: '',
-      shipmentStatus: 'Scheduled',
-    } as any;
-    const updated = await this.logisticsService.dispatchShipment(user, shipment);
+    const updated = await this.logisticsService.dispatchShipment(user, {
+      shipmentId,
+    } as any);
     res.status(200).json({
       shipmentId: updated.shipmentId,
       shipmentStatus: updated.shipmentStatus,
@@ -102,19 +89,9 @@ export class LogisticsController {
   async confirmDelivery(req: Request, res: Response): Promise<void> {
     const user = this.requireUser(req);
     const shipmentId = requireParam(asString(req.params.shipmentId), 'shipmentId');
-    const shipment = {
-      shipmentId, orderId: '', warehouseId: '',
-      deliveryAddress: new (require('../../../domain/model/value-objects.js').DeliveryAddress)({
-        addressId: '', country: '', department: '', city: '', neighborhood: '',
-        address: '', postalCode: '', reference: '',
-      }),
-      carrier: new (require('../../../domain/entities/Shipment.js').Carrier)({
-        carrierId: '', name: '', serviceType: '',
-      }),
-      trackingCode: '',
-      shipmentStatus: 'Scheduled',
-    } as any;
-    const updated = await this.logisticsService.confirmDelivery(user, shipment);
+    const updated = await this.logisticsService.confirmDelivery(user, {
+      shipmentId,
+    } as any);
     res.status(200).json({
       shipmentId: updated.shipmentId,
       shipmentStatus: updated.shipmentStatus,

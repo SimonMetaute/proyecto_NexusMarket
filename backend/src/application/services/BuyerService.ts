@@ -17,9 +17,8 @@ import { Buyer, BuyerTrustLevel } from '../../domain/entities/Buyer.js';
 import type { DeliveryAddress, PaymentMethod } from '../../domain/model/value-objects.js';
 import { CartLine, ShoppingCart, CartStatus } from '../../domain/entities/ShoppingCart.js';
 import { OrderLine, Order } from '../../domain/entities/Order.js';
-import { OrderStatus, WarehouseStatus } from '../../domain/model/enums.js';
+import { OrderStatus } from '../../domain/model/enums.js';
 import { Warehouse } from '../../domain/entities/Warehouse.js';
-import { WarehouseLocation } from '../../domain/model/value-objects.js';
 import type { Product } from '../../domain/entities/Product.js';
 import type { ProductVariant } from '../../domain/entities/ProductVariant.js';
 import type { Shipment } from '../../domain/entities/Shipment.js';
@@ -30,9 +29,11 @@ import type { ShoppingCartRepositoryPort } from '../../domain/ports/out/Shopping
 import type { OrderRepositoryPort } from '../../domain/ports/out/OrderRepositoryPort.js';
 import type { InventoryRepositoryPort } from '../../domain/ports/out/InventoryRepositoryPort.js';
 import type { ProductRepository } from '../../domain/ports/out/ProductRepository.js';
+import type { ProductVariantRepositoryPort } from '../../domain/ports/out/ProductVariantRepositoryPort.js';
+import type { WarehouseRepositoryPort } from '../../domain/ports/out/WarehouseRepositoryPort.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 import { AuditLog } from '../../domain/model/AuditLog.js';
-import { ApiError } from '../../infrastructure/http/errors/ApiError.js';
+import { ApiError } from '../../domain/errors/ApiError.js';
 
 export class BuyerService implements BuyerPort {
   constructor(
@@ -41,6 +42,8 @@ export class BuyerService implements BuyerPort {
     private readonly orderRepository: OrderRepositoryPort,
     private readonly inventoryRepository: InventoryRepositoryPort,
     private readonly productRepository: ProductRepository,
+    private readonly variantRepository: ProductVariantRepositoryPort,
+    private readonly warehouseRepository: WarehouseRepositoryPort,
     private readonly auditLogRepository: AuditLogRepository,
   ) {}
 
@@ -205,15 +208,32 @@ export class BuyerService implements BuyerPort {
   async addItemToCart(
     user: User,
     cart: ShoppingCart,
-    product: Product,
-    variant: ProductVariant | undefined,
+    productId: string,
+    variantId: string | undefined,
     quantity: Quantity,
   ): Promise<ShoppingCart> {
     if (quantity.value <= 0) {
       throw ApiError.invalidRequest('Quantity must be greater than zero.');
     }
 
-    const variantId = variant?.variantId;
+    // Prices and variant data always come from the catalog, never from the
+    // request body: a buyer must not be able to choose the unit price.
+    const product = await this.productRepository.findById(productId);
+    if (!product) {
+      throw ApiError.notFound(`Product ${productId} not found.`);
+    }
+
+    let unitPrice = product.price;
+    if (variantId !== undefined) {
+      const variant = await this.variantRepository.findByIdentifier({
+        variantId,
+      } as ProductVariant);
+      if (!variant || variant.productId !== product.productId) {
+        throw ApiError.notFound(`Variant ${variantId} not found for product ${productId}.`);
+      }
+      unitPrice += variant.additionalPrice ?? 0;
+    }
+
     const existingLine = cart.cartLines.find(
       (line) => line.productId === product.productId && line.variantId === variantId,
     );
@@ -244,7 +264,7 @@ export class BuyerService implements BuyerPort {
       cartLineId: globalThis.crypto.randomUUID(),
       productId: product.productId,
       quantity: quantity.value,
-      unitPrice: product.price ?? 0,
+      unitPrice,
     };
     if (variantId !== undefined) {
       params.variantId = variantId;
@@ -338,49 +358,22 @@ export class BuyerService implements BuyerPort {
       throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
     }
 
-    // Reserve inventory for each line.
+    // Resolve products and enforce the single-seller cart invariant before any
+    // mutation. This also gives the order a real sellerId.
+    const sellerIds = new Set<string>();
+    const prepared: Array<{ product: Product; quantity: number }> = [];
+    const orderLines: OrderLine[] = [];
+
     for (const line of cart.cartLines) {
       const product = await this.productRepository.findById(line.productId);
       if (!product) {
         throw ApiError.notFound(`Product ${line.productId} not found.`);
       }
-      const inventoryList = await this.inventoryRepository.findByProduct(product);
-      if (!inventoryList || inventoryList.length === 0) {
-        throw ApiError.invalidDomainValue(`No inventory for product ${line.productId}.`);
+      if (!product.sellerId) {
+        throw ApiError.invalidDomainValue(`Product ${line.productId} has no seller.`);
       }
-      const inv = inventoryList[0];
-      if (!inv) {
-        throw ApiError.invalidDomainValue(`No inventory record for product ${line.productId}.`);
-      }
-      const warehouse = new Warehouse({
-        warehouseId: inv.warehouseId,
-        sellerId: '',
-        name: '',
-        location: new WarehouseLocation({
-          country: '',
-          department: '',
-          city: '',
-          address: '',
-          postalCode: '',
-        }),
-        capacity: 0,
-        status: WarehouseStatus.OPERATIONAL,
-        creationDate: new Date(),
-      });
-      await this.inventoryRepository.reserve(product, warehouse, { value: line.quantity } as any, {
-        orderId: cart.cartId,
-        buyerId: buyer.buyerId,
-        sellerId: '',
-        orderLines: [],
-        subtotal: 0,
-        taxes: 0,
-        shippingCost: 0,
-        total: 0,
-        creationDate: new Date(),
-      } as unknown as Order);
-    }
+      sellerIds.add(product.sellerId);
 
-    const orderLines = cart.cartLines.map((line) => {
       const params: any = {
         orderLineId: line.cartLineId,
         productId: line.productId,
@@ -391,13 +384,19 @@ export class BuyerService implements BuyerPort {
       if (line.variantId !== undefined) {
         params.variantId = line.variantId;
       }
-      return new OrderLine(params);
-    });
+      orderLines.push(new OrderLine(params));
+      prepared.push({ product, quantity: line.quantity });
+    }
+
+    if (sellerIds.size > 1) {
+      throw ApiError.invalidDomainValue('A cart cannot mix products from multiple sellers.');
+    }
+    const sellerId = [...sellerIds][0] ?? '';
 
     const order = new Order({
       orderId: globalThis.crypto.randomUUID(),
       buyerId: buyer.buyerId,
-      sellerId: '',
+      sellerId,
       orderLines,
       subtotal: cart.subtotal,
       taxes: 0,
@@ -407,9 +406,60 @@ export class BuyerService implements BuyerPort {
       creationDate: new Date(),
     });
 
-    await this.orderRepository.save(order);
-    cart.convert();
-    await this.cartRepository.save(cart);
+    // Reserve inventory. If any step fails, release what was already reserved
+    // (compensating transaction) so stock is never lost.
+    const reserved: Array<{ product: Product; warehouse: Warehouse; quantity: number }> = [];
+    try {
+      for (const item of prepared) {
+        const inventoryList = await this.inventoryRepository.findByProduct(item.product);
+        if (!inventoryList || inventoryList.length === 0) {
+          throw ApiError.invalidDomainValue(`No inventory for product ${item.product.productId}.`);
+        }
+        const inv =
+          inventoryList.find((candidate) => candidate.availableStock >= item.quantity) ??
+          inventoryList[0];
+        if (!inv) {
+          throw ApiError.invalidDomainValue(`No inventory record for product ${item.product.productId}.`);
+        }
+        const warehouse = await this.warehouseRepository.findById(inv.warehouseId);
+        if (!warehouse) {
+          throw ApiError.invalidDomainValue(`Warehouse ${inv.warehouseId} not found.`);
+        }
+        await this.inventoryRepository.reserve(
+          item.product,
+          warehouse,
+          { value: item.quantity } as any,
+          order,
+        );
+        reserved.push({ product: item.product, warehouse, quantity: item.quantity });
+      }
+
+      await this.orderRepository.save(order);
+      cart.convert();
+      await this.cartRepository.save(cart);
+    } catch (error) {
+      for (const item of reserved.reverse()) {
+        try {
+          await this.inventoryRepository.release(
+            item.product,
+            item.warehouse,
+            { value: item.quantity } as any,
+            order,
+          );
+        } catch (releaseError) {
+          console.error(
+            `[checkout] Could not release reservation for ${item.product.productId}`,
+            releaseError,
+          );
+        }
+      }
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw ApiError.invalidDomainValue(
+        error instanceof Error ? error.message : 'Checkout failed.',
+      );
+    }
 
     await this.auditLogRepository.save(
       new AuditLog({

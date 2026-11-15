@@ -60,7 +60,7 @@ export interface BuyerPort {
    * Upsert semantics: if (product, variant) already exists in cart, increment quantity (merge).
    * Returns ShoppingCart. No 409 on duplicate - only for blocked operations per Contract-alignment.md §6.
    */
-  addItemToCart(user: User, cart: ShoppingCart, product: Product, variant: ProductVariant | undefined, quantity: Quantity): Promise<ShoppingCart>;
+  addItemToCart(user: User, cart: ShoppingCart, productId: string, variantId: string | undefined, quantity: Quantity): Promise<ShoppingCart>;
   updateCartItem(user: User, cart: ShoppingCart, line: any, newQuantity: Quantity): Promise<ShoppingCart>;
   removeCartItem(user: User, cart: ShoppingCart, line: any): Promise<ShoppingCart>;
   mergeCart(user: User, currentCart: ShoppingCart, previousCart: ShoppingCart): Promise<ShoppingCart>;

@@ -46,7 +46,7 @@ import type { OperationRepositoryPort } from '../../domain/ports/out/OperationRe
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 import type { Operation } from '../../domain/ports/in/AdministratorPort.js';
 import { SellerVerificationStatus } from '../../domain/model/enums.js';
-import { ApiError } from '../../infrastructure/http/errors/ApiError.js';
+import { ApiError } from '../../domain/errors/ApiError.js';
 
 export class AdministratorService implements AdministratorPort {
   constructor(

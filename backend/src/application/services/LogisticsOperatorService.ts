@@ -15,7 +15,7 @@ import type {
 } from '../../domain/ports/in/LogisticsOperatorPort.js';
 import type { User } from '../../domain/model/user.js';
 import { Warehouse } from '../../domain/entities/Warehouse.js';
-import type { Inventory } from '../../domain/entities/Inventory.js';
+import { Inventory } from '../../domain/entities/Inventory.js';
 import type { Shipment } from '../../domain/entities/Shipment.js';
 import type { Order } from '../../domain/entities/Order.js';
 import type { Return } from '../../domain/entities/Return.js';
@@ -31,7 +31,7 @@ import { WarehouseStatus } from '../../domain/model/enums.js';
 import { ShipmentStatus } from '../../domain/model/enums.js';
 import { InventoryMovementType } from '../../domain/ports/in/LogisticsOperatorPort.js';
 
-import { ApiError } from '../../infrastructure/http/errors/ApiError.js';
+import { ApiError } from '../../domain/errors/ApiError.js';
 import { WarehouseLocation } from '../../domain/model/value-objects.js';
 
 export class LogisticsOperatorService implements LogisticsOperatorPort {
@@ -96,8 +96,28 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
   }
 
   async registerStockEntry(user: User, inventory: Inventory, quantity: Quantity, receiptReference: string): Promise<Inventory> {
-    inventory.addStock(quantity.value);
-    await this.inventoryRepository.save(inventory);
+    const product = await this.productRepository.findById(inventory.productId);
+    if (!product) {
+      throw ApiError.notFound(`Product ${inventory.productId} not found`);
+    }
+    const warehouse = await this.warehouseRepository.findById(inventory.warehouseId);
+    if (!warehouse) {
+      throw ApiError.notFound(`Warehouse ${inventory.warehouseId} not found`);
+    }
+    const existing = await this.inventoryRepository.findByProductAndWarehouse(product, warehouse);
+    const target =
+      existing ??
+      new Inventory({
+        inventoryId: inventory.inventoryId,
+        productId: product.productId,
+        warehouseId: warehouse.warehouseId,
+        availableStock: 0,
+        reservedStock: 0,
+        totalStock: 0,
+        updateDate: new Date(),
+      });
+    target.addStock(quantity.value);
+    await this.inventoryRepository.save(target);
 
     await this.auditLogRepository.save(
       new AuditLog({
@@ -105,10 +125,10 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
         actorId: user.userId,
         action: 'INVENTORY_ENTRY',
         timestamp: new Date(),
-        details: { inventoryId: inventory.inventoryId, quantity: quantity.value, receiptReference },
+        details: { inventoryId: target.inventoryId, quantity: quantity.value, receiptReference },
       }),
     );
-    return inventory;
+    return target;
   }
 
   async registerStockMovement(user: User, inventory: Inventory, movementType: InventoryMovementType, quantity: Quantity, reason: string): Promise<Inventory> {
@@ -155,8 +175,13 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
   }
 
   async dispatchShipment(user: User, shipment: Shipment): Promise<Shipment> {
-    shipment.dispatch();
-    return shipment;
+    const found = await this.shipmentRepository.findByIdentifier(shipment);
+    if (!found) {
+      throw ApiError.notFound(`Shipment ${shipment.shipmentId} not found`);
+    }
+    found.dispatch();
+    await this.shipmentRepository.save(found);
+    return found;
   }
 
   // --- Shipment Tracking & Exception Handling ---
@@ -178,8 +203,13 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
   }
 
   async confirmDelivery(user: User, shipment: Shipment): Promise<Shipment> {
-    shipment.deliver();
-    return shipment;
+    const found = await this.shipmentRepository.findByIdentifier(shipment);
+    if (!found) {
+      throw ApiError.notFound(`Shipment ${shipment.shipmentId} not found`);
+    }
+    found.deliver();
+    await this.shipmentRepository.save(found);
+    return found;
   }
 
   // --- Return Receipt & Processing ---

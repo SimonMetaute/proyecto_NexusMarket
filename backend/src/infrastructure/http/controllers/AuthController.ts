@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { LoginUseCase } from '../../../application/use-cases/LoginUseCase.js';
 import type { PublicAccessPort } from '../../../domain/ports/in/PublicAccessPort.js';
 import type { JwtServicePort } from '../../../domain/ports/out/JwtServicePort.js';
+import type { User } from '../../../domain/model/user.js';
 import { ApiError } from '../errors/ApiError.js';
 import { extractBearerToken } from '../middlewares/auth.js';
 import {
@@ -42,6 +43,10 @@ export class AuthController {
     }
 
     await this.jwtService.revoke(token);
+    const user = req.user as User | undefined;
+    if (user !== undefined) {
+      await this.publicAccess.logout(user);
+    }
     res.status(204).send();
   }
 

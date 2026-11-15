@@ -72,10 +72,10 @@ test('requirePositiveInt accepts positive int', () => {
   assert.strictEqual(requirePositiveInt({ qty: 5 }, 'qty'), 5);
 });
 test('requirePositiveInt throws on zero', () => {
-  expectError(() => requirePositiveInt({ qty: 0 } as any), 'qty');
+  expectError(() => requirePositiveInt({ qty: 0 } as any, 'qty'), 'qty');
 });
 test('requirePositiveInt throws on negative', () => {
-  expectError(() => requirePositiveInt({ qty: -1 } as any), 'qty');
+  expectError(() => requirePositiveInt({ qty: -1 } as any, 'qty'), 'qty');
 });
 
 // requireEnum

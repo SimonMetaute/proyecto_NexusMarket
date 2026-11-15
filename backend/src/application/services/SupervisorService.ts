@@ -37,7 +37,7 @@ import type { ReturnRepositoryPort } from '../../domain/ports/out/ReturnReposito
 import type { BuyerRepositoryPort } from '../../domain/ports/out/BuyerRepositoryPort.js';
 import type { SellerRepositoryPort } from '../../domain/ports/out/SellerRepositoryPort.js';
 import { OperationType } from '../../domain/model/enums.js';
-import { ApiError } from '../../infrastructure/http/errors/ApiError.js';
+import { ApiError } from '../../domain/errors/ApiError.js';
 
 export class SupervisorService implements SupervisorPort {
   constructor(

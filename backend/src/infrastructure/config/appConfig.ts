@@ -35,6 +35,7 @@ export const appConfig = {
   },
   mongo: {
     uri: envString('MONGO_URI', 'mongodb://localhost:27017/audit_db'),
+    serverSelectionTimeoutMs: envNumber('MONGO_TIMEOUT_MS', 1500),
   },
   security: {
     jwtSecret: envString('JWT_SECRET', 'nexusmarket-dev-secret'),

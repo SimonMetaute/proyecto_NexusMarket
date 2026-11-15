@@ -12,6 +12,7 @@ export interface InventoryRepositoryPort {
   save(inventory: Inventory): Promise<Inventory>;
   findByProductAndWarehouse(product: Product, warehouse: Warehouse): Promise<Inventory | null>;
   findByProduct(product: Product): Promise<Inventory[]>;
+  findByWarehouse(warehouse: Warehouse): Promise<Inventory[]>;
   hasAvailableStock(product: Product, quantity: any): Promise<boolean>;
   reserve(product: Product, warehouse: Warehouse, quantity: any, order: Order): Promise<Inventory>;
   release(product: Product, warehouse: Warehouse, quantity: any, order: Order): Promise<Inventory>;

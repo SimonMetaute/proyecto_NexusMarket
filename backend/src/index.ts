@@ -127,6 +127,8 @@ const buyerService = new BuyerService(
   orderRepository,
   inventoryRepository,
   productRepository,
+  productVariantRepository,
+  warehouseRepository,
   auditLogRepository,
 );
 const sellerService = new SellerService(
@@ -206,7 +208,14 @@ process.on('SIGTERM', async () => {
 });
 
 await initDb();
-await initMongo();
+try {
+  await initMongo();
+} catch (error) {
+  console.warn(
+    '[startup] MongoDB is unavailable; audit logging will retry lazily.',
+    error instanceof Error ? error.message : error,
+  );
+}
 
 app.listen(appConfig.server.port, () => {
   console.log(`NexusMarket is running on port ${appConfig.server.port}`);

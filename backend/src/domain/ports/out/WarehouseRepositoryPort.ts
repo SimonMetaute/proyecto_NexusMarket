@@ -9,6 +9,7 @@ import { WarehouseStatus } from '../../model/enums.js';
 
 export interface WarehouseRepositoryPort {
   save(warehouse: Warehouse): Promise<Warehouse>;
+  findById(warehouseId: string): Promise<Warehouse | null>;
   findByIdentifier(warehouse: Warehouse): Promise<Warehouse | null>;
   findBySeller(seller: Seller): Promise<Warehouse[]>;
   findByStatus(status: WarehouseStatus): Promise<Warehouse[]>;

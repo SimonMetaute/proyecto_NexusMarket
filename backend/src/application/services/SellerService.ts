@@ -25,7 +25,7 @@ import { Warehouse } from '../../domain/entities/Warehouse.js';
 import { WarehouseLocation } from '../../domain/model/value-objects.js';
 import type { Product } from '../../domain/entities/Product.js';
 import type { ProductVariant } from '../../domain/entities/ProductVariant.js';
-import type { Inventory } from '../../domain/entities/Inventory.js';
+import { Inventory } from '../../domain/entities/Inventory.js';
 import type { Order } from '../../domain/entities/Order.js';
 import type { Shipment } from '../../domain/entities/Shipment.js';
 import type { Return } from '../../domain/entities/Return.js';
@@ -38,7 +38,7 @@ import type { ProductVariantRepositoryPort } from '../../domain/ports/out/Produc
 import type { WarehouseRepositoryPort } from '../../domain/ports/out/WarehouseRepositoryPort.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 import { SellerVerificationStatus, WarehouseStatus } from '../../domain/model/enums.js';
-import { ApiError } from '../../infrastructure/http/errors/ApiError.js';
+import { ApiError } from '../../domain/errors/ApiError.js';
 
 export class SellerService implements SellerPort {
   constructor(
@@ -158,8 +158,15 @@ export class SellerService implements SellerPort {
     if (!seller.isVerified()) {
       throw ApiError.forbidden('Only verified sellers can publish products');
     }
-    product.publish();
-    await this.productRepository.save(product);
+    const found = await this.productRepository.findById(product.productId);
+    if (!found) {
+      throw ApiError.notFound(`Product ${product.productId} not found`);
+    }
+    if (found.sellerId !== seller.sellerId) {
+      throw ApiError.forbidden('Cannot publish another seller product');
+    }
+    found.publish();
+    await this.productRepository.save(found);
 
     await this.auditLogRepository.save(
       new AuditLog({
@@ -167,7 +174,7 @@ export class SellerService implements SellerPort {
         actorId: user.userId,
         action: 'PRODUCT_PUBLICATION',
         timestamp: new Date(),
-        details: { productId: product.productId },
+        details: { productId: found.productId },
       }),
     );
   }
@@ -188,7 +195,11 @@ export class SellerService implements SellerPort {
     if (!seller) {
       throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
     }
-    if (product.sellerId !== seller.sellerId) {
+    const found = await this.productRepository.findById(product.productId);
+    if (!found) {
+      throw ApiError.notFound(`Product ${product.productId} not found`);
+    }
+    if (found.sellerId !== seller.sellerId) {
       throw ApiError.forbidden('Cannot add variants for another seller product');
     }
     const exists = await this.variantRepository.existsDuplicateVariant(variant);
@@ -220,7 +231,8 @@ export class SellerService implements SellerPort {
     const warehouses = await this.warehouseRepository.findBySeller(seller);
     const result: Inventory[] = [];
     for (const warehouse of warehouses) {
-      // findByProduct returns all inventory for a product; we filter by warehouse in application layer.
+      const rows = await this.inventoryRepository.findByWarehouse(warehouse);
+      result.push(...rows);
     }
     return result;
   }
@@ -234,8 +246,39 @@ export class SellerService implements SellerPort {
   }
 
   async registerStockEntry(user: User, inventory: Inventory, quantity: Quantity, receiptReference: string): Promise<Inventory> {
-    inventory.addStock(quantity.value);
-    await this.inventoryRepository.save(inventory);
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    const product = await this.productRepository.findById(inventory.productId);
+    if (!product) {
+      throw ApiError.notFound(`Product ${inventory.productId} not found`);
+    }
+    if (product.sellerId !== seller.sellerId) {
+      throw ApiError.forbidden('Cannot register stock for another seller product');
+    }
+    const warehouse = await this.warehouseRepository.findById(inventory.warehouseId);
+    if (!warehouse) {
+      throw ApiError.notFound(`Warehouse ${inventory.warehouseId} not found`);
+    }
+    if (warehouse.sellerId !== seller.sellerId) {
+      throw ApiError.forbidden('Cannot register stock in another seller warehouse');
+    }
+
+    const existing = await this.inventoryRepository.findByProductAndWarehouse(product, warehouse);
+    const target =
+      existing ??
+      new Inventory({
+        inventoryId: inventory.inventoryId,
+        productId: product.productId,
+        warehouseId: warehouse.warehouseId,
+        availableStock: 0,
+        reservedStock: 0,
+        totalStock: 0,
+        updateDate: new Date(),
+      });
+    target.addStock(quantity.value);
+    await this.inventoryRepository.save(target);
 
     await this.auditLogRepository.save(
       new AuditLog({
@@ -243,10 +286,10 @@ export class SellerService implements SellerPort {
         actorId: user.userId,
         action: 'INVENTORY_ENTRY',
         timestamp: new Date(),
-        details: { inventoryId: inventory.inventoryId, quantity: quantity.value, receiptReference },
+        details: { inventoryId: target.inventoryId, quantity: quantity.value, receiptReference },
       }),
     );
-    return inventory;
+    return target;
   }
 
   async adjustInventory(user: User, product: Product, warehouse: Warehouse, adjustment: Quantity, reason: string): Promise<Inventory> {
@@ -278,21 +321,10 @@ export class SellerService implements SellerPort {
       if (!inventory) {
         throw ApiError.invalidDomainValue(`No inventory record for product ${line.productId}`);
       }
-      const warehouse = new Warehouse({
-        warehouseId: inventory.warehouseId,
-        sellerId: '',
-        name: '',
-        location: new WarehouseLocation({
-          country: '',
-          department: '',
-          city: '',
-          address: '',
-          postalCode: '',
-        }),
-        capacity: 0,
-        status: WarehouseStatus.OPERATIONAL,
-        creationDate: new Date(),
-      });
+      const warehouse = await this.warehouseRepository.findById(inventory.warehouseId);
+      if (!warehouse) {
+        throw ApiError.notFound(`Warehouse ${inventory.warehouseId} not found`);
+      }
       await this.inventoryRepository.reserve(product, warehouse, { value: line.quantity } as any, order);
     }
   }
@@ -315,15 +347,37 @@ export class SellerService implements SellerPort {
   }
 
   async approveOrder(user: User, order: Order): Promise<Order> {
-    order.confirm();
-    await this.orderRepository.save(order);
-    return order;
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    const found = await this.orderRepository.findByIdentifier(order);
+    if (!found) {
+      throw ApiError.notFound(`Order ${order.orderId} not found`);
+    }
+    if (found.sellerId !== seller.sellerId) {
+      throw ApiError.forbidden('Cannot approve another seller order');
+    }
+    found.confirm();
+    await this.orderRepository.save(found);
+    return found;
   }
 
   async prepareOrder(user: User, order: Order): Promise<Order> {
-    order.prepare();
-    await this.orderRepository.save(order);
-    return order;
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    const found = await this.orderRepository.findByIdentifier(order);
+    if (!found) {
+      throw ApiError.notFound(`Order ${order.orderId} not found`);
+    }
+    if (found.sellerId !== seller.sellerId) {
+      throw ApiError.forbidden('Cannot prepare another seller order');
+    }
+    found.prepare();
+    await this.orderRepository.save(found);
+    return found;
   }
 
   // --- Shipment & Dispatch ---

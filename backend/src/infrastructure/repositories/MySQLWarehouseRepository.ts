@@ -53,6 +53,15 @@ export class MySQLWarehouseRepository implements WarehouseRepositoryPort {
     return warehouse;
   }
 
+  async findById(warehouseId: string): Promise<Warehouse | null> {
+    const [rows] = await pool.query<WarehouseRow[]>(
+      'SELECT * FROM warehouses WHERE warehouseId = ? LIMIT 1',
+      [warehouseId],
+    );
+    const row = rows[0];
+    return row === undefined ? null : toDomain(row);
+  }
+
   async findByIdentifier(warehouse: Warehouse): Promise<Warehouse | null> {
     const [rows] = await pool.query<WarehouseRow[]>(
       'SELECT * FROM warehouses WHERE warehouseId = ? LIMIT 1',

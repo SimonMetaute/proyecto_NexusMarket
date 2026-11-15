@@ -230,41 +230,22 @@ export class BuyerController {
     }
     const body = requireObject(req.body);
     const cart = await this.buyerService.consultMyCart(user);
-    const product = {
-      productId: requireString(body, 'productId', { maxLength: 36 }),
-      name: '',
-      description: '',
-      sellerId: '',
-      price: requireNumber(body, 'price'),
-      stock: 0,
-      createdAt: new Date(),
-    } as any;
+    const productId = requireString(body, 'productId', { maxLength: 36 });
     const quantity = { value: requirePositiveInt(body, 'quantity') };
     const variantId = optionalString(body, 'variantId');
 
-    const variant: ProductVariant | undefined =
-      variantId !== undefined
-        ? new ProductVariant({
-            variantId,
-            productId: product.productId,
-            attribute: requireString(body, 'attribute', { maxLength: 100 }),
-            value: requireString(body, 'value', { maxLength: 255 }),
-            additionalPrice: optionalNumber(body, 'additionalPrice') ?? 0,
-            skuVariant: requireString(body, 'skuVariant', { maxLength: 100 }),
-          })
-        : undefined;
+    const existed = cart.cartLines.some(
+      (l) => l.productId === productId && l.variantId === variantId,
+    );
 
     const updated = await this.buyerService.addItemToCart(
       user,
       cart,
-      product,
-      variant,
+      productId,
+      variantId,
       quantity,
     );
 
-    const existed = cart.cartLines.some(
-      (l) => l.productId === product.productId && l.variantId === variant?.variantId,
-    );
     res.status(existed ? 200 : 201).json({
       cartId: updated.cartId,
       cartLines: updated.cartLines.map((l) => ({
@@ -386,7 +367,16 @@ export class BuyerController {
     res.status(200).json({
       orderId: details.orderId,
       total: details.total,
+      status: details.orderStatus,
       orderStatus: details.orderStatus,
+      items: details.orderLines.map((line) => ({
+        lineId: line.orderLineId,
+        product: { productId: line.productId },
+        variantId: line.variantId,
+        quantity: line.quantity,
+        price: line.unitPrice,
+        subtotal: line.subtotal,
+      })),
     });
   }
 }

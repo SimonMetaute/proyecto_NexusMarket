@@ -147,6 +147,12 @@ export class SellerController {
       throw new ApiError('INVALID_REQUEST', 'price or basePrice is required');
     }
     const stock = optionalNumber(body, 'stock') ?? 0;
+    if (price < 0) {
+      throw ApiError.invalidDomainValue('price must be greater than or equal to zero');
+    }
+    if (stock < 0) {
+      throw ApiError.invalidDomainValue('stock must be greater than or equal to zero');
+    }
     const params: any = {
       name: requireString(body, 'name', { maxLength: 255 }),
       description: requireString(body, 'description', { maxLength: 2000 }),
@@ -250,26 +256,6 @@ export class SellerController {
     const warehouseId = requireString(body, 'warehouseId', { maxLength: 36 });
     const quantity = requirePositiveInt(body, 'quantity');
     const receiptReference = requireString(body, 'receiptReference', { maxLength: 255 });
-    const product = {
-      productId,
-      name: '',
-      description: '',
-      sellerId: '',
-      price: 0,
-      stock: 0,
-      createdAt: new Date(),
-    } as any;
-    const warehouse = new Warehouse({
-      warehouseId,
-      sellerId: '',
-      name: '',
-      location: new WarehouseLocation({
-        country: '', department: '', city: '', address: '', postalCode: '',
-      }),
-      capacity: 0,
-      status: 'Operational',
-      creationDate: new Date(),
-    } as any);
     const inventory = new Inventory({
       inventoryId: globalThis.crypto.randomUUID(),
       productId,

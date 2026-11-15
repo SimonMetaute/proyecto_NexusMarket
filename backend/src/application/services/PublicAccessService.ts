@@ -22,7 +22,7 @@ import { User, UserType, IdentityDocument } from '../../domain/model/user.js';
 import { Buyer } from '../../domain/entities/Buyer.js';
 import { Product } from '../../domain/entities/Product.js';
 import { AuditLog } from '../../domain/model/AuditLog.js';
-import { ApiError } from '../../infrastructure/http/errors/ApiError.js';
+import { ApiError } from '../../domain/errors/ApiError.js';
 
 export class PublicAccessService implements PublicAccessPort {
   constructor(

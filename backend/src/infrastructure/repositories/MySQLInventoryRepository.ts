@@ -76,6 +76,14 @@ export class MySQLInventoryRepository implements InventoryRepositoryPort {
     return rows.map(toDomain);
   }
 
+  async findByWarehouse(warehouse: Warehouse): Promise<Inventory[]> {
+    const [rows] = await pool.query<InventoryRow[]>(
+      'SELECT * FROM inventory WHERE warehouseId = ?',
+      [warehouse.warehouseId],
+    );
+    return rows.map(toDomain);
+  }
+
   async hasAvailableStock(product: Product, quantity: any): Promise<boolean> {
     const requested = toQuantityValue(quantity);
     const [rows] = await pool.query<AvailableStockRow[]>(
