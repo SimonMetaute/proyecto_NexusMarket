@@ -22,6 +22,10 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { DeliveryAddress as DeliveryAddressVO } from '../../../domain/model/value-objects.js';
 import { PaymentMethod as PaymentMethodVO } from '../../../domain/model/value-objects.js';
 import { Buyer as BuyerEntity } from '../../../domain/entities/Buyer.js';
+import {
+  toDeliveryAddressResponse,
+  toPaymentMethodResponse,
+} from '../mappers/BuyerMapper.js';
 
 function toDeliveryAddressDto(body: any): DeliveryAddressVO {
   return new DeliveryAddressVO({
@@ -74,8 +78,8 @@ export class BuyerController {
       userId: buyer.userId,
       trustLevel: buyer.trustLevel,
       lastPurchaseDate: buyer.lastPurchaseDate,
-      deliveryAddresses: buyer.deliveryAddresses,
-      paymentMethods: buyer.paymentMethods,
+      deliveryAddresses: buyer.deliveryAddresses.map(toDeliveryAddressResponse),
+      paymentMethods: buyer.paymentMethods.map(toPaymentMethodResponse),
     });
   }
 
@@ -89,8 +93,8 @@ export class BuyerController {
     const params: any = {
       buyerId: buyer.buyerId,
       userId: buyer.userId,
-      deliveryAddresses: buyer.deliveryAddresses,
-      paymentMethods: buyer.paymentMethods,
+      deliveryAddresses: buyer.deliveryAddresses.map(toDeliveryAddressResponse),
+      paymentMethods: buyer.paymentMethods.map(toPaymentMethodResponse),
       trustLevel: buyer.trustLevel,
     };
     if (body.trustLevel !== undefined) {
@@ -116,7 +120,7 @@ export class BuyerController {
       throw ApiError.authenticationRequired();
     }
     const addresses = await this.buyerService.consultMyDeliveryAddresses(user);
-    res.status(200).json(addresses);
+    res.status(200).json(addresses.map(toDeliveryAddressResponse));
   }
 
   async addDeliveryAddress(req: Request, res: Response): Promise<void> {
@@ -127,7 +131,7 @@ export class BuyerController {
     const body = requireObject(req.body);
     const address = toDeliveryAddressDto(body);
     const created = await this.buyerService.addDeliveryAddress(user, address);
-    res.status(201).json(created);
+    res.status(201).json(toDeliveryAddressResponse(created));
   }
 
   async setPrimaryDeliveryAddress(req: Request, res: Response): Promise<void> {
@@ -145,7 +149,7 @@ export class BuyerController {
       ...address,
       isPrimary: true,
     } as DeliveryAddressVO);
-    res.status(200).json(updated);
+    res.status(200).json(toDeliveryAddressResponse(updated));
   }
 
   async removeDeliveryAddress(req: Request, res: Response): Promise<void> {
@@ -169,7 +173,7 @@ export class BuyerController {
       throw ApiError.authenticationRequired();
     }
     const methods = await this.buyerService.consultMyPaymentMethods(user);
-    res.status(200).json(methods);
+    res.status(200).json(methods.map(toPaymentMethodResponse));
   }
 
   async addPaymentMethod(req: Request, res: Response): Promise<void> {
@@ -180,7 +184,7 @@ export class BuyerController {
     const body = requireObject(req.body);
     const method = toPaymentMethodDto(body);
     const created = await this.buyerService.addPaymentMethod(user, method);
-    res.status(201).json(created);
+    res.status(201).json(toPaymentMethodResponse(created));
   }
 
   async consultMyCart(req: Request, res: Response): Promise<void> {

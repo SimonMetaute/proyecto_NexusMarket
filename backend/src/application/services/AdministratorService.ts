@@ -172,29 +172,45 @@ export class AdministratorService implements AdministratorPort {
     return found;
   }
 
+  /**
+   * The HTTP layer only carries the `sellerId`; the aggregate must be reloaded
+   * so domain methods (`approve`/`reject`) exist and no stored fields are lost.
+   */
+  private async requireStoredSeller(seller: Seller): Promise<Seller> {
+    const stored = await this.sellerRepository.findByIdentifier(seller);
+    if (!stored) {
+      throw ApiError.notFound(`Seller ${seller.sellerId} not found`);
+    }
+    return stored;
+  }
+
   async approveSeller(user: User, seller: Seller): Promise<Seller> {
-    seller.approve();
-    await this.sellerRepository.save(seller);
-    return seller;
+    const stored = await this.requireStoredSeller(seller);
+    stored.approve();
+    await this.sellerRepository.save(stored);
+    return stored;
   }
 
   async rejectSeller(user: User, seller: Seller, reason: string): Promise<Seller> {
-    seller.reject();
-    await this.sellerRepository.save(seller);
-    return seller;
+    const stored = await this.requireStoredSeller(seller);
+    stored.reject();
+    await this.sellerRepository.save(stored);
+    return stored;
   }
 
   async revokeSellerAccess(user: User, seller: Seller, reason: string): Promise<Seller> {
-    seller.reject();
-    await this.sellerRepository.save(seller);
-    return seller;
+    const stored = await this.requireStoredSeller(seller);
+    stored.reject();
+    await this.sellerRepository.save(stored);
+    return stored;
   }
 
   async changeSellerVerificationStatus(user: User, seller: Seller, newStatus: SellerVerificationStatus): Promise<Seller> {
-    if (newStatus === SellerVerificationStatus.VERIFIED) seller.approve();
-    else if (newStatus === SellerVerificationStatus.REJECTED) seller.reject();
-    await this.sellerRepository.save(seller);
-    return seller;
+    const stored = await this.requireStoredSeller(seller);
+    if (newStatus === SellerVerificationStatus.VERIFIED) stored.approve();
+    else if (newStatus === SellerVerificationStatus.REJECTED) stored.reject();
+    await this.sellerRepository.save(stored);
+    return stored;
   }
 
   async reviewSellerCompliance(user: User, seller: Seller): Promise<any> {

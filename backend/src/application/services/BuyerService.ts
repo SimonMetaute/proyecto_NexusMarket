@@ -240,6 +240,9 @@ export class BuyerService implements BuyerPort {
 
     if (existingLine) {
       existingLine.updateQuantity(existingLine.quantity + quantity.value);
+      // The cart totals are derived from the lines; recalculate so the
+      // response never reports a stale subtotal/total after an increment.
+      cart.recalculate();
       await this.cartRepository.save(cart);
 
       await this.auditLogRepository.save(
@@ -307,6 +310,7 @@ export class BuyerService implements BuyerPort {
     }
 
     existingLine.updateQuantity(newQuantity.value);
+    cart.recalculate();
     await this.cartRepository.save(cart);
     return cart;
   }
@@ -333,6 +337,7 @@ export class BuyerService implements BuyerPort {
         currentCart.addLine(line);
       }
     }
+    currentCart.recalculate();
     await this.cartRepository.save(currentCart);
     return currentCart;
   }
