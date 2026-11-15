@@ -22,7 +22,6 @@ import { Warehouse } from '../../domain/entities/Warehouse.js';
 import type { Product } from '../../domain/entities/Product.js';
 import type { ProductVariant } from '../../domain/entities/ProductVariant.js';
 import type { Shipment } from '../../domain/entities/Shipment.js';
-import type { Return } from '../../domain/entities/Return.js';
 import type { Operation } from '../../domain/entities/Operation.js';
 import type { BuyerRepositoryPort } from '../../domain/ports/out/BuyerRepositoryPort.js';
 import type { ShoppingCartRepositoryPort } from '../../domain/ports/out/ShoppingCartRepositoryPort.js';
@@ -32,8 +31,31 @@ import type { ProductRepository } from '../../domain/ports/out/ProductRepository
 import type { ProductVariantRepositoryPort } from '../../domain/ports/out/ProductVariantRepositoryPort.js';
 import type { WarehouseRepositoryPort } from '../../domain/ports/out/WarehouseRepositoryPort.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
+import type { InvoiceRepositoryPort } from '../../domain/ports/out/InvoiceRepositoryPort.js';
+import type { ShipmentRepositoryPort } from '../../domain/ports/out/ShipmentRepositoryPort.js';
+import type { ReturnRepositoryPort } from '../../domain/ports/out/ReturnRepositoryPort.js';
+import { Return } from '../../domain/entities/Return.js';
+import { Invoice } from '../../domain/entities/Invoice.js';
+import { Currency } from '../../domain/model/value-objects.js';
+import {
+  CurrencyCode,
+  InvoiceStatus,
+  ReturnReason,
+  ReturnStatus,
+  ShipmentStatus,
+} from '../../domain/model/enums.js';
 import { AuditLog } from '../../domain/model/AuditLog.js';
 import { ApiError } from '../../domain/errors/ApiError.js';
+
+const RETURN_WINDOW_DAYS = 30;
+
+function mapReturnReason(reason: string): ReturnReason {
+  const normalized = reason.trim().toLowerCase();
+  const match = Object.values(ReturnReason).find(
+    (candidate) => candidate.toLowerCase() === normalized,
+  );
+  return match ?? ReturnReason.OTHER;
+}
 
 export class BuyerService implements BuyerPort {
   constructor(
@@ -45,6 +67,9 @@ export class BuyerService implements BuyerPort {
     private readonly variantRepository: ProductVariantRepositoryPort,
     private readonly warehouseRepository: WarehouseRepositoryPort,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly invoiceRepository: InvoiceRepositoryPort,
+    private readonly shipmentRepository: ShipmentRepositoryPort,
+    private readonly returnRepository: ReturnRepositoryPort,
   ) {}
 
   // --- Profile Management ---
@@ -440,6 +465,10 @@ export class BuyerService implements BuyerPort {
       }
 
       await this.orderRepository.save(order);
+      const existingInvoice = await this.invoiceRepository.findByOrder(order);
+      if (existingInvoice === null) {
+        await this.invoiceRepository.save(this.buildInvoice(order));
+      }
       cart.convert();
       await this.cartRepository.save(cart);
     } catch (error) {
@@ -476,6 +505,25 @@ export class BuyerService implements BuyerPort {
       }),
     );
     return order;
+  }
+
+  private buildInvoice(order: Order): Invoice {
+    return new Invoice({
+      invoiceId: globalThis.crypto.randomUUID(),
+      orderId: order.orderId,
+      invoiceNumber: `INV-${order.orderId}`,
+      issueDate: new Date(),
+      subtotal: order.subtotal,
+      taxes: order.taxes,
+      total: order.total,
+      currency: new Currency({
+        code: CurrencyCode.COP,
+        name: 'Colombian Peso',
+        symbol: '$',
+        decimals: 2,
+      }),
+      invoiceStatus: InvoiceStatus.ISSUED,
+    });
   }
 
   async consultMyOrders(user: User): Promise<Order[]> {
@@ -522,11 +570,102 @@ export class BuyerService implements BuyerPort {
     reason: string,
     evidence: string,
   ): Promise<Return> {
-    throw ApiError.invalidRequest('Return request not implemented yet.');
+    const buyer = await this.buyerRepository.findByUser(user);
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
+    const stored = await this.orderRepository.findByIdentifier(order);
+    if (!stored) {
+      throw ApiError.notFound(`Order ${order.orderId} not found`);
+    }
+    if (stored.buyerId !== buyer.buyerId) {
+      throw ApiError.forbidden('Cannot request a return for another buyer order');
+    }
+    if (stored.orderStatus !== OrderStatus.DELIVERED) {
+      throw ApiError.invalidDomainValue(
+        'Returns are only allowed for orders in Delivered state.',
+      );
+    }
+
+    const shipments = await this.shipmentRepository.findByOrder(stored);
+    const delivered = shipments
+      .filter(
+        (shipment) =>
+          shipment.shipmentStatus === ShipmentStatus.DELIVERED &&
+          shipment.deliveryDate !== undefined,
+      )
+      .sort((a, b) => (b.deliveryDate?.getTime() ?? 0) - (a.deliveryDate?.getTime() ?? 0))[0];
+    if (!delivered || delivered.deliveryDate === undefined) {
+      throw ApiError.invalidDomainValue(
+        'The delivery date is not available, so the return window cannot be validated.',
+      );
+    }
+    const elapsedMs = Date.now() - delivered.deliveryDate.getTime();
+    const maxMs = RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+    if (elapsedMs < 0 || elapsedMs > maxMs) {
+      throw ApiError.invalidDomainValue(
+        `The ${RETURN_WINDOW_DAYS}-day return window has expired.`,
+        { deliveryDate: delivered.deliveryDate.toISOString() },
+      );
+    }
+
+    const existingReturns = await this.returnRepository.findByOrder(stored);
+    if (
+      existingReturns.some(
+        (existing) => existing.returnStatus !== ReturnStatus.REJECTED,
+      )
+    ) {
+      throw ApiError.alreadyExists(
+        `Order ${stored.orderId} already has an active return request.`,
+      );
+    }
+
+    let invoice = await this.invoiceRepository.findByOrder(stored);
+    if (invoice === null) {
+      invoice = await this.invoiceRepository.save(this.buildInvoice(stored));
+    }
+
+    const returnCase = new Return({
+      returnId: globalThis.crypto.randomUUID(),
+      orderId: stored.orderId,
+      invoiceId: invoice.invoiceId,
+      reason: mapReturnReason(reason),
+      returnStatus: ReturnStatus.REQUESTED,
+      requestDate: new Date(),
+      refundAmount: stored.total,
+      ...(evidence.trim().length > 0 ? { evidence } : {}),
+    });
+    await this.returnRepository.save(returnCase);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'RETURN_REQUEST',
+        timestamp: new Date(),
+        details: {
+          returnId: returnCase.returnId,
+          orderId: stored.orderId,
+          invoiceId: invoice.invoiceId,
+          reason: returnCase.reason,
+        },
+      }),
+    );
+    return returnCase;
   }
 
   async consultMyReturns(user: User): Promise<Return[]> {
-    return [];
+    const buyer = await this.buyerRepository.findByUser(user);
+    if (!buyer) {
+      throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
+    }
+    const orders = await this.orderRepository.findByBuyer(buyer);
+    const result: Return[] = [];
+    for (const order of orders) {
+      const returns = await this.returnRepository.findByOrder(order);
+      result.push(...returns);
+    }
+    return result.sort((a, b) => b.requestDate.getTime() - a.requestDate.getTime());
   }
 
   async consultReturnDetails(user: User, returnCase: Return): Promise<Return> {

@@ -14,15 +14,13 @@ import {
   TableHeader,
   TableRow,
   formatMoney,
-  getSellerProfile,
+  listSellerProducts,
   publishProduct,
-  searchCatalog,
   statusVariant,
   toApiError,
 } from '@nexus/shared';
-import type { CatalogProduct } from '@nexus/shared';
 import { PackagePlus, PackageSearch } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export function ProductsPage() {
@@ -30,25 +28,10 @@ export function ProductsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  const profileQuery = useQuery({
-    queryKey: ['seller', 'profile'],
-    queryFn: getSellerProfile,
+  const productsQuery = useQuery({
+    queryKey: ['seller', 'products'],
+    queryFn: listSellerProducts,
   });
-
-  const catalogQuery = useQuery({
-    queryKey: ['catalog', 'seller-products'],
-    queryFn: () => searchCatalog({ page: 1, limit: 200 }),
-  });
-
-  const sellerId = profileQuery.data?.sellerId;
-
-  const products = useMemo<CatalogProduct[]>(() => {
-    const all = catalogQuery.data?.products ?? [];
-    if (sellerId === undefined) {
-      return [];
-    }
-    return all.filter((product) => product.seller.sellerId === sellerId);
-  }, [catalogQuery.data, sellerId]);
 
   const publish = useMutation({
     mutationFn: (productId: string) => publishProduct(productId),
@@ -57,6 +40,8 @@ export function ProductsPage() {
       setActionMessage(
         `Producto ${response.productId.slice(0, 8)}… publicado (${response.status}).`,
       );
+      void queryClient.invalidateQueries({ queryKey: ['seller', 'products'] });
+      void queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] });
       void queryClient.invalidateQueries({ queryKey: ['catalog'] });
     },
     onError: (error) => {
@@ -65,14 +50,13 @@ export function ProductsPage() {
     },
   });
 
-  const isLoading = profileQuery.isLoading || catalogQuery.isLoading;
-  const firstError = profileQuery.error ?? catalogQuery.error;
+  const products = productsQuery.data ?? [];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Mis productos"
-        description="Vista derivada del catálogo público filtrado por tu sellerId."
+        description="Productos propios, incluidos borradores. Publicar exige SKU y al menos una imagen."
         actions={
           <Link to="/products/new">
             <Button>
@@ -82,10 +66,10 @@ export function ProductsPage() {
         }
       />
 
-      <Alert variant="info" title="Contrato real">
-        No existe <code>GET /seller/products</code>: el listado combina el catálogo
-        público con tu <code>sellerId</code>. El backend incluye productos en estado
-        distinto de <em>Published</em> y no expone edición ni borrado.
+      <Alert variant="info" title="Regla de publicación">
+        El backend valida que el producto tenga SKU y al menos una imagen antes de
+        publicarlo. Si falta alguno, responde <code>422</code> indicando el campo
+        <code>sku</code> o <code>images</code>.
       </Alert>
 
       {actionMessage !== null ? (
@@ -93,7 +77,7 @@ export function ProductsPage() {
       ) : null}
       {actionError !== null ? <Alert variant="error">{actionError}</Alert> : null}
 
-      {isLoading ? (
+      {productsQuery.isLoading ? (
         <div className="space-y-3">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
@@ -101,21 +85,18 @@ export function ProductsPage() {
         </div>
       ) : null}
 
-      {firstError !== null && firstError !== undefined ? (
+      {productsQuery.isError ? (
         <ErrorState
-          error={firstError}
-          onRetry={() => {
-            void profileQuery.refetch();
-            void catalogQuery.refetch();
-          }}
+          error={productsQuery.error}
+          onRetry={() => void productsQuery.refetch()}
         />
       ) : null}
 
-      {!isLoading && (firstError === null || firstError === undefined) && products.length === 0 ? (
+      {!productsQuery.isLoading && !productsQuery.isError && products.length === 0 ? (
         <EmptyState
           icon={<PackageSearch className="h-10 w-10" />}
-          title="Aún no tienes productos en el catálogo"
-          description="Los borradores recién creados pueden no aparecer hasta que el catálogo los devuelva. Crea un producto para comenzar."
+          title="Aún no tienes productos"
+          description="Crea tu primer producto; se guardará como borrador hasta que lo publiques."
           action={
             <Link to="/products/new">
               <Button>Crear producto</Button>
@@ -147,7 +128,7 @@ export function ProductsPage() {
                   </p>
                 </TableCell>
                 <TableCell>{product.sku ?? '—'}</TableCell>
-                <TableCell>{product.category}</TableCell>
+                <TableCell>{product.category ?? '—'}</TableCell>
                 <TableCell>{formatMoney(product.price)}</TableCell>
                 <TableCell>{product.stock}</TableCell>
                 <TableCell>

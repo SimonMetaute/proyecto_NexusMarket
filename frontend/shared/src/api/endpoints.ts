@@ -2,7 +2,12 @@ import { http } from './client';
 import type {
   AddCartItemRequest,
   AddCartItemResponse,
+  AddProductImageRequest,
+  AdminDashboardSummary,
   AdminUser,
+  AdminUserFilters,
+  AuditLogPage,
+  AuditLogQuery,
   BuyerProfile,
   Cart,
   CatalogPage,
@@ -21,21 +26,32 @@ import type {
   InventoryItem,
   LoginRequest,
   LoginResponse,
+  OnboardSellerRequest,
+  OnboardSellerResponse,
   OrderDetail,
   OrderStatusActionResponse,
   OrderSummary,
   PaymentMethod,
+  ProductImage,
   PublishProductResponse,
   RegisterBuyerRequest,
   RegisterBuyerResponse,
+  RequestReturnRequest,
+  ReturnCase,
+  ReturnFilters,
   SellerApprovalResponse,
+  SellerDashboard,
   SellerOrder,
+  SellerProduct,
   SellerProfile,
   SellerWarehouse,
+  Shipment,
   ShipmentActionResponse,
+  ShipmentFilters,
   StockEntryRequest,
   StockEntryResponse,
   UpdateBuyerProfileRequest,
+  UpdateProductRequest,
   UserResponse,
 } from './types';
 
@@ -195,6 +211,22 @@ export async function getBuyerOrder(orderId: string): Promise<OrderDetail> {
   return data;
 }
 
+export async function requestReturn(
+  orderId: string,
+  payload: RequestReturnRequest,
+): Promise<ReturnCase> {
+  const { data } = await http.post<ReturnCase>(
+    `/buyer/orders/${encodeURIComponent(orderId)}/returns`,
+    payload,
+  );
+  return data;
+}
+
+export async function listBuyerReturns(): Promise<ReturnCase[]> {
+  const { data } = await http.get<ReturnCase[]>('/buyer/returns');
+  return data;
+}
+
 /* --------------------------------- Vendedor -------------------------------- */
 
 export async function getSellerProfile(): Promise<SellerProfile> {
@@ -228,6 +260,56 @@ export async function createProduct(
     '/seller/products',
     payload,
   );
+  return data;
+}
+
+export async function listSellerProducts(): Promise<SellerProduct[]> {
+  const { data } = await http.get<SellerProduct[]>('/seller/products');
+  return data;
+}
+
+export async function updateSellerProduct(
+  productId: string,
+  payload: UpdateProductRequest,
+): Promise<SellerProduct> {
+  const { data } = await http.put<SellerProduct>(
+    `/seller/products/${encodeURIComponent(productId)}`,
+    payload,
+  );
+  return data;
+}
+
+export async function listProductImages(
+  productId: string,
+): Promise<ProductImage[]> {
+  const { data } = await http.get<ProductImage[]>(
+    `/seller/products/${encodeURIComponent(productId)}/images`,
+  );
+  return data;
+}
+
+export async function addProductImage(
+  productId: string,
+  payload: AddProductImageRequest,
+): Promise<ProductImage> {
+  const { data } = await http.post<ProductImage>(
+    `/seller/products/${encodeURIComponent(productId)}/images`,
+    payload,
+  );
+  return data;
+}
+
+export async function deleteProductImage(
+  productId: string,
+  imageId: string,
+): Promise<void> {
+  await http.delete(
+    `/seller/products/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
+  );
+}
+
+export async function getSellerDashboard(): Promise<SellerDashboard> {
+  const { data } = await http.get<SellerDashboard>('/seller/dashboard');
   return data;
 }
 
@@ -291,8 +373,31 @@ export async function prepareOrder(
 
 /* ------------------------------- Administración ----------------------------- */
 
-export async function listAdminUsers(): Promise<AdminUser[]> {
-  const { data } = await http.get<AdminUser[]>('/admin/users');
+export async function listAdminUsers(
+  filters: AdminUserFilters = {},
+): Promise<AdminUser[]> {
+  const { data } = await http.get<AdminUser[]>('/admin/users', {
+    params: filters,
+  });
+  return data;
+}
+
+export async function onboardSeller(
+  payload: OnboardSellerRequest,
+): Promise<OnboardSellerResponse> {
+  const { data } = await http.post<OnboardSellerResponse>(
+    '/admin/sellers/onboarding',
+    payload,
+  );
+  return data;
+}
+
+export async function listAuditLogs(
+  query: AuditLogQuery = {},
+): Promise<AuditLogPage> {
+  const { data } = await http.get<AuditLogPage>('/admin/audit-logs', {
+    params: query,
+  });
   return data;
 }
 
@@ -323,8 +428,8 @@ export async function rejectSeller(
   return data;
 }
 
-export async function getAdminDashboard(): Promise<DashboardSummary> {
-  const { data } = await http.get<DashboardSummary>('/admin/dashboard');
+export async function getAdminDashboard(): Promise<AdminDashboardSummary> {
+  const { data } = await http.get<AdminDashboardSummary>('/admin/dashboard');
   return data;
 }
 
@@ -342,6 +447,31 @@ export async function getSupervisorHealth(): Promise<HealthSummary> {
 
 export async function listLogisticsWarehouses(): Promise<SellerWarehouse[]> {
   const { data } = await http.get<SellerWarehouse[]>('/logistics/warehouses');
+  return data;
+}
+
+export async function listLogisticsShipments(
+  filters: ShipmentFilters = {},
+): Promise<Shipment[]> {
+  const { data } = await http.get<Shipment[]>('/logistics/shipments', {
+    params: filters,
+  });
+  return data;
+}
+
+export async function listLogisticsReturns(
+  filters: ReturnFilters = {},
+): Promise<ReturnCase[]> {
+  const { data } = await http.get<ReturnCase[]>('/logistics/returns', {
+    params: filters,
+  });
+  return data;
+}
+
+export async function receiveReturn(returnId: string): Promise<ReturnCase> {
+  const { data } = await http.patch<ReturnCase>(
+    `/logistics/returns/${encodeURIComponent(returnId)}/receive`,
+  );
   return data;
 }
 

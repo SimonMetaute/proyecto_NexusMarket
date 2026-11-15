@@ -12,9 +12,18 @@ import {
   getAdminDashboard,
   getSupervisorDashboard,
   getSupervisorHealth,
+  formatMoney,
   useAuth,
 } from '@nexus/shared';
-import { Activity, ShoppingCart, TrendingUp } from 'lucide-react';
+import {
+  Activity,
+  Package,
+  RotateCcw,
+  ShoppingCart,
+  Store,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 
 export function DashboardPage() {
@@ -49,13 +58,16 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description={`Sesión ${session?.user.role ?? ''} · datos devueltos por el backend.`}
+        description={`Sesión ${session?.user.role ?? ''} · agregaciones reales del backend.`}
       />
 
-      <Alert variant="info" title="Endpoints de resumen en estado stub">
-        El backend responde valores fijos para estos dashboards. Se muestran tal cual,
-        sin completarlos con datos simulados.
-      </Alert>
+      {isSupervisor ? (
+        <Alert variant="info" title="Dashboard de supervisor en modo resumen">
+          El endpoint <code>/supervisor/dashboard</code> sigue devolviendo el resumen
+          básico; los KPIs completos están disponibles en{' '}
+          <code>/admin/dashboard</code> para sesiones administradoras.
+        </Alert>
+      ) : null}
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -86,7 +98,37 @@ export function DashboardPage() {
           <Metric
             icon={<TrendingUp className="h-4 w-4" />}
             label="Ventas totales"
-            value={String(adminQuery.data.totalSales)}
+            value={formatMoney(adminQuery.data.totalSales)}
+          />
+          <Metric
+            icon={<ShoppingCart className="h-4 w-4" />}
+            label="Órdenes totales"
+            value={String(adminQuery.data.totalOrders)}
+          />
+          <Metric
+            icon={<Users className="h-4 w-4" />}
+            label="Usuarios"
+            value={String(adminQuery.data.totalUsers)}
+          />
+          <Metric
+            icon={<Store className="h-4 w-4" />}
+            label="Vendedores"
+            value={String(adminQuery.data.totalSellers)}
+          />
+          <Metric
+            icon={<Package className="h-4 w-4" />}
+            label="Productos"
+            value={String(adminQuery.data.totalProducts)}
+          />
+          <Metric
+            icon={<Package className="h-4 w-4" />}
+            label="Publicados"
+            value={String(adminQuery.data.publishedProducts)}
+          />
+          <Metric
+            icon={<RotateCcw className="h-4 w-4" />}
+            label="Devoluciones pendientes"
+            value={String(adminQuery.data.pendingReturns)}
           />
         </div>
       ) : null}

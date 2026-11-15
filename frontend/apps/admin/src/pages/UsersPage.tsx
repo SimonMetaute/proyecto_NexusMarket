@@ -12,6 +12,7 @@ import {
   FormField,
   Input,
   PageHeader,
+  Select,
   Skeleton,
   Table,
   TableBody,
@@ -20,23 +21,37 @@ import {
   TableHeader,
   TableRow,
   approveSeller,
+  formatDate,
   listAdminUsers,
   rejectSeller,
   toApiError,
 } from '@nexus/shared';
-import { UserX, Users } from 'lucide-react';
+import type { AdminUserFilters } from '@nexus/shared';
+import { Users } from 'lucide-react';
 import { useState } from 'react';
+
+const ROLES = [
+  '',
+  'BUYER',
+  'SELLER',
+  'ADMINISTRATOR',
+  'SUPERVISOR',
+  'LOGISTICS_OPERATOR',
+];
+
+const STATUSES = ['', 'Active', 'Inactive', 'Blocked', 'PendingVerification'];
 
 export function UsersPage() {
   const queryClient = useQueryClient();
+  const [filters, setFilters] = useState<AdminUserFilters>({});
   const [sellerId, setSellerId] = useState('');
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const usersQuery = useQuery({
-    queryKey: ['admin', 'users'],
-    queryFn: listAdminUsers,
+    queryKey: ['admin', 'users', filters],
+    queryFn: () => listAdminUsers(filters),
   });
 
   const invalidate = async (): Promise<void> => {
@@ -77,17 +92,56 @@ export function UsersPage() {
     <div className="space-y-6">
       <PageHeader
         title="Usuarios"
-        description="Listado de cuentas y aprobación de vendedores."
+        description="Cuentas reales, filtros por rol/estado y aprobación de vendedores."
       />
-
-      <Alert variant="warning" title="Listado de usuarios no implementado en el backend">
-        <code>GET /admin/users</code> devuelve siempre <code>[]</code> porque el
-        repositorio no expone <code>findAll</code>. La tabla muestra el estado real
-        (vacío), no datos inventados.
-      </Alert>
 
       {message !== null ? <Alert variant="success">{message}</Alert> : null}
       {error !== null ? <Alert variant="error">{error}</Alert> : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <FormField label="Rol" htmlFor="roleFilter">
+            <Select
+              id="roleFilter"
+              value={filters.role ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  role: event.target.value === '' ? undefined : event.target.value,
+                }))
+              }
+            >
+              {ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role === '' ? 'Todos' : role}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Estado" htmlFor="statusFilter">
+            <Select
+              id="statusFilter"
+              value={filters.status ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  status:
+                    event.target.value === '' ? undefined : event.target.value,
+                }))
+              }
+            >
+              {STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status === '' ? 'Todos' : status}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -129,10 +183,6 @@ export function UsersPage() {
               Rechazar
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            El backend valida que el vendedor exista y que la transición sea válida;
-            cualquier error se muestra con su mensaje original.
-          </p>
         </CardContent>
       </Card>
 
@@ -153,8 +203,8 @@ export function UsersPage() {
       {usersQuery.data !== undefined && usersQuery.data.length === 0 ? (
         <EmptyState
           icon={<Users className="h-10 w-10" />}
-          title="Sin usuarios para listar"
-          description="La API no devuelve cuentas todavía. Usa el formulario superior si conoces el sellerId a aprobar."
+          title="Sin usuarios para estos filtros"
+          description="Ajusta el rol o el estado, o provisiona un vendedor desde Onboarding."
         />
       ) : null}
 
@@ -166,30 +216,37 @@ export function UsersPage() {
               <TableHead>Email</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Registro</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {usersQuery.data.map((user) => (
               <TableRow key={user.userId}>
-                <TableCell className="font-mono text-xs">{user.userId}</TableCell>
+                <TableCell>
+                  <div className="font-medium">
+                    {user.firstName} {user.lastName}
+                  </div>
+                  <div className="font-mono text-xs text-muted-foreground">
+                    {user.userId}
+                  </div>
+                </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <Badge variant="outline">{user.role}</Badge>
                 </TableCell>
-                <TableCell>{user.status ?? '—'}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{user.status}</Badge>
+                </TableCell>
+                <TableCell>
+                  {user.registrationDate !== undefined
+                    ? formatDate(user.registrationDate)
+                    : '—'}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       ) : null}
-
-      <Alert variant="info" title="Suspender / activar cuentas">
-        <span className="flex items-center gap-2">
-          <UserX className="h-4 w-4" />
-          El contrato real no expone endpoints para cambiar el estado de una cuenta
-          desde este portal. La acción no se simula.
-        </span>
-      </Alert>
     </div>
   );
 }

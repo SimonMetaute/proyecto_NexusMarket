@@ -35,4 +35,9 @@ export interface ProductRepository {
    * @returns an array of all Product instances.
    */
   findAll(): Promise<Product[]>;
+
+  /**
+   * Finds every product owned by a seller (drafts included).
+   */
+  findBySellerId(sellerId: string): Promise<Product[]>;
 }

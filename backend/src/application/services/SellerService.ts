@@ -17,6 +17,9 @@ import type {
   SellerPerformanceMetrics,
   Carrier,
   Quantity,
+  ProductUpdateInput,
+  AddProductImageInput,
+  SellerDashboard,
 } from '../../domain/ports/in/SellerPort.js';
 import type { User } from '../../domain/model/user.js';
 import type { Seller } from '../../domain/entities/Seller.js';
@@ -24,6 +27,9 @@ import type { Store } from '../../domain/entities/Store.js';
 import { Warehouse } from '../../domain/entities/Warehouse.js';
 import { WarehouseLocation } from '../../domain/model/value-objects.js';
 import type { Product } from '../../domain/entities/Product.js';
+import { ProductImage } from '../../domain/entities/ProductImage.js';
+import type { ProductImageRepositoryPort } from '../../domain/ports/out/ProductImageRepositoryPort.js';
+import type { AnalyticsRepositoryPort } from '../../domain/ports/out/AnalyticsRepositoryPort.js';
 import type { ProductVariant } from '../../domain/entities/ProductVariant.js';
 import { Inventory } from '../../domain/entities/Inventory.js';
 import type { Order } from '../../domain/entities/Order.js';
@@ -49,6 +55,8 @@ export class SellerService implements SellerPort {
     private readonly variantRepository: ProductVariantRepositoryPort,
     private readonly warehouseRepository: WarehouseRepositoryPort,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly productImageRepository: ProductImageRepositoryPort,
+    private readonly analyticsRepository: AnalyticsRepositoryPort,
   ) {}
 
   // --- Profile & Store Management ---
@@ -150,6 +158,50 @@ export class SellerService implements SellerPort {
     return product;
   }
 
+  async consultMyProducts(user: User): Promise<Product[]> {
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    return this.productRepository.findBySellerId(seller.sellerId);
+  }
+
+  private async requireOwnedProduct(user: User, productId: string): Promise<Product> {
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    const product = await this.productRepository.findById(productId);
+    if (!product) {
+      throw ApiError.notFound(`Product ${productId} not found`);
+    }
+    if (product.sellerId !== seller.sellerId) {
+      throw ApiError.forbidden('Cannot modify another seller product');
+    }
+    return product;
+  }
+
+  async updateMyProduct(
+    user: User,
+    productId: string,
+    changes: ProductUpdateInput,
+  ): Promise<Product> {
+    const product = await this.requireOwnedProduct(user, productId);
+    product.updateDetails(changes);
+    await this.productRepository.save(product);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'PRODUCT_MODIFICATION',
+        timestamp: new Date(),
+        details: { productId: product.productId, fields: Object.keys(changes) },
+      }),
+    );
+    return product;
+  }
+
   async publishProduct(user: User, product: Product): Promise<void> {
     const seller = await this.sellerRepository.findByUser(user);
     if (!seller) {
@@ -165,6 +217,19 @@ export class SellerService implements SellerPort {
     if (found.sellerId !== seller.sellerId) {
       throw ApiError.forbidden('Cannot publish another seller product');
     }
+    if (!found.hasPublishableData()) {
+      throw ApiError.invalidDomainValue(
+        'Product must have an SKU before it can be published.',
+        { field: 'sku' },
+      );
+    }
+    const imageCount = await this.productImageRepository.countByProductId(found.productId);
+    if (imageCount === 0) {
+      throw ApiError.invalidDomainValue(
+        'Product must have at least one image before it can be published.',
+        { field: 'images' },
+      );
+    }
     found.publish();
     await this.productRepository.save(found);
 
@@ -175,6 +240,61 @@ export class SellerService implements SellerPort {
         action: 'PRODUCT_PUBLICATION',
         timestamp: new Date(),
         details: { productId: found.productId },
+      }),
+    );
+  }
+
+  // --- Product Images ---
+  async consultProductImages(user: User, productId: string): Promise<ProductImage[]> {
+    await this.requireOwnedProduct(user, productId);
+    return this.productImageRepository.findByProductId(productId);
+  }
+
+  async addProductImage(
+    user: User,
+    productId: string,
+    input: AddProductImageInput,
+  ): Promise<ProductImage> {
+    await this.requireOwnedProduct(user, productId);
+    const position =
+      input.position ?? (await this.productImageRepository.countByProductId(productId));
+    const image = new ProductImage({
+      imageId: globalThis.crypto.randomUUID(),
+      productId,
+      url: input.url,
+      ...(input.altText !== undefined ? { altText: input.altText } : {}),
+      position,
+      createdAt: new Date(),
+    });
+    await this.productImageRepository.save(image);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'PRODUCT_MODIFICATION',
+        timestamp: new Date(),
+        details: { productId, imageId: image.imageId, operation: 'image.added' },
+      }),
+    );
+    return image;
+  }
+
+  async removeProductImage(user: User, productId: string, imageId: string): Promise<void> {
+    await this.requireOwnedProduct(user, productId);
+    const image = await this.productImageRepository.findById(imageId);
+    if (!image || image.productId !== productId) {
+      throw ApiError.notFound(`Image ${imageId} not found for product ${productId}`);
+    }
+    await this.productImageRepository.delete(imageId);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'PRODUCT_MODIFICATION',
+        timestamp: new Date(),
+        details: { productId, imageId, operation: 'image.removed' },
       }),
     );
   }
@@ -441,6 +561,20 @@ export class SellerService implements SellerPort {
   // --- Performance & Analytics ---
   async consultMyPerformance(user: User): Promise<SellerPerformanceMetrics> {
     return { totalSales: 0, totalOrders: 0, rating: 0 };
+  }
+
+  async consultMyDashboard(user: User): Promise<SellerDashboard> {
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    const stats = await this.analyticsRepository.getSellerDashboard(seller.sellerId);
+    return {
+      ...stats,
+      sellerId: seller.sellerId,
+      commercialName: seller.commercialName,
+      verificationStatus: seller.verificationStatus,
+    };
   }
 
   async consultMyOperationHistory(user: User, period: DateRange): Promise<AuditLog[]> {

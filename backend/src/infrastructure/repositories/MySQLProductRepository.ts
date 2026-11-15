@@ -123,4 +123,12 @@ export class MySQLProductRepository implements ProductRepository {
     const [rows] = await pool.query<ProductRow[]>('SELECT * FROM products');
     return rows.map(toDomain);
   }
+
+  async findBySellerId(sellerId: string): Promise<Product[]> {
+    const [rows] = await pool.query<ProductRow[]>(
+      'SELECT * FROM products WHERE sellerId = ? ORDER BY createdAt DESC',
+      [sellerId],
+    );
+    return rows.map(toDomain);
+  }
 }

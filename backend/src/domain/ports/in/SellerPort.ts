@@ -14,6 +14,8 @@ import type { Order } from '../../entities/Order.js';
 import type { Shipment } from '../../entities/Shipment.js';
 import type { Return } from '../../entities/Return.js';
 import type { AuditLog } from '../../model/AuditLog.js';
+import type { ProductImage } from '../../entities/ProductImage.js';
+import type { ProductCategory } from '../../model/enums.js';
 
 export interface StoreStatus {
   value: string;
@@ -68,6 +70,36 @@ export interface Quantity {
   value: number;
 }
 
+export interface ProductUpdateInput {
+  name?: string;
+  description?: string;
+  category?: ProductCategory;
+  sku?: string;
+  basePrice?: number;
+  price?: number;
+  brand?: string;
+  stock?: number;
+}
+
+export interface AddProductImageInput {
+  url: string;
+  altText?: string;
+  position?: number;
+}
+
+export interface SellerDashboard {
+  activeOrders: number;
+  totalSales: number;
+  totalOrders: number;
+  totalProducts: number;
+  publishedProducts: number;
+  totalStock: number;
+  pendingReturns: number;
+  sellerId: string;
+  commercialName: string;
+  verificationStatus: string;
+}
+
 export interface SellerPort {
   // Profile & Store Management
   consultMyProfile(user: User): Promise<Seller>;
@@ -85,10 +117,16 @@ export interface SellerPort {
 
   // Product Catalog Management
   createProduct(user: User, product: Product): Promise<Product>;
-  updateProduct(user: User, product: Product): Promise<Product>;
+  consultMyProducts(user: User): Promise<Product[]>;
+  updateMyProduct(user: User, productId: string, changes: ProductUpdateInput): Promise<Product>;
   publishProduct(user: User, product: Product): Promise<void>;
   removeProduct(user: User, product: Product): Promise<void>;
   suspendProduct(user: User, product: Product, reason: string): Promise<void>;
+
+  // Product Images
+  consultProductImages(user: User, productId: string): Promise<ProductImage[]>;
+  addProductImage(user: User, productId: string, input: AddProductImageInput): Promise<ProductImage>;
+  removeProductImage(user: User, productId: string, imageId: string): Promise<void>;
 
   // Product Variants & Attributes
   addProductVariant(user: User, product: Product, variant: ProductVariant): Promise<ProductVariant>;
@@ -130,5 +168,6 @@ export interface SellerPort {
 
   // Performance & Analytics
   consultMyPerformance(user: User): Promise<SellerPerformanceMetrics>;
+  consultMyDashboard(user: User): Promise<SellerDashboard>;
   consultMyOperationHistory(user: User, period: DateRange): Promise<AuditLog[]>;
 }

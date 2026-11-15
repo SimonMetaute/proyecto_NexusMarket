@@ -1,9 +1,9 @@
-import type { RowDataPacket } from 'mysql2/promise';
+﻿import type { RowDataPacket } from 'mysql2/promise';
 import type { WarehouseRepositoryPort } from '../../domain/ports/out/WarehouseRepositoryPort.js';
 import { Warehouse } from '../../domain/entities/Warehouse.js';
 import type { Seller } from '../../domain/entities/Seller.js';
 import { WarehouseStatus } from '../../domain/model/enums.js';
-import { pool } from '../database/mysql-pool.js';
+import { getExecutor } from '../database/mysql-transaction.js';
 import { toDate, toNumber } from './mappers/rowMappers.js';
 import { warehouseLocationFromJson, warehouseLocationToJson } from './mappers/valueObjectMappers.js';
 
@@ -31,7 +31,7 @@ function toDomain(row: WarehouseRow): Warehouse {
 
 export class MySQLWarehouseRepository implements WarehouseRepositoryPort {
   async save(warehouse: Warehouse): Promise<Warehouse> {
-    await pool.execute(
+    await getExecutor().execute(
       `INSERT INTO warehouses (warehouseId, sellerId, name, location_json, capacity, status, creationDate)
        VALUES (?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
@@ -54,7 +54,7 @@ export class MySQLWarehouseRepository implements WarehouseRepositoryPort {
   }
 
   async findById(warehouseId: string): Promise<Warehouse | null> {
-    const [rows] = await pool.query<WarehouseRow[]>(
+    const [rows] = await getExecutor().query<WarehouseRow[]>(
       'SELECT * FROM warehouses WHERE warehouseId = ? LIMIT 1',
       [warehouseId],
     );
@@ -63,7 +63,7 @@ export class MySQLWarehouseRepository implements WarehouseRepositoryPort {
   }
 
   async findByIdentifier(warehouse: Warehouse): Promise<Warehouse | null> {
-    const [rows] = await pool.query<WarehouseRow[]>(
+    const [rows] = await getExecutor().query<WarehouseRow[]>(
       'SELECT * FROM warehouses WHERE warehouseId = ? LIMIT 1',
       [warehouse.warehouseId],
     );
@@ -72,7 +72,7 @@ export class MySQLWarehouseRepository implements WarehouseRepositoryPort {
   }
 
   async findBySeller(seller: Seller): Promise<Warehouse[]> {
-    const [rows] = await pool.query<WarehouseRow[]>(
+    const [rows] = await getExecutor().query<WarehouseRow[]>(
       'SELECT * FROM warehouses WHERE sellerId = ?',
       [seller.sellerId],
     );
@@ -80,10 +80,11 @@ export class MySQLWarehouseRepository implements WarehouseRepositoryPort {
   }
 
   async findByStatus(status: WarehouseStatus): Promise<Warehouse[]> {
-    const [rows] = await pool.query<WarehouseRow[]>(
+    const [rows] = await getExecutor().query<WarehouseRow[]>(
       'SELECT * FROM warehouses WHERE status = ?',
       [status],
     );
     return rows.map(toDomain);
   }
 }
+

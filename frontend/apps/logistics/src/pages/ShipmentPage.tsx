@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Badge,
@@ -21,15 +21,21 @@ import { Link, useParams } from 'react-router-dom';
 
 export function ShipmentPage() {
   const { orderId = '' } = useParams();
+  const queryClient = useQueryClient();
   const [shipmentId, setShipmentId] = useState(orderId);
   const [result, setResult] = useState<ShipmentActionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const refresh = async (): Promise<void> => {
+    await queryClient.invalidateQueries({ queryKey: ['logistics', 'shipments'] });
+  };
 
   const dispatch = useMutation({
     mutationFn: () => dispatchShipment(shipmentId.trim()),
     onSuccess: (response) => {
       setResult(response);
       setError(null);
+      void refresh();
     },
     onError: (caught) => {
       setResult(null);
@@ -42,6 +48,7 @@ export function ShipmentPage() {
     onSuccess: (response) => {
       setResult(response);
       setError(null);
+      void refresh();
     },
     onError: (caught) => {
       setResult(null);
@@ -63,11 +70,10 @@ export function ShipmentPage() {
         description="Despacho y confirmación de entrega por identificador de envío."
       />
 
-      <Alert variant="info" title="Identificador requerido">
-        El backend opera con <code>shipmentId</code>, no con <code>orderId</code>, y no
-        permite listar envíos. Introduce el identificador real para ejecutar una acción.
-        La ruta del SDD usa <code>/shipments/:orderId</code>; aquí el parámetro se usa
-        como shipmentId.
+      <Alert variant="info" title="Identificador del envío">
+        El backend opera con <code>shipmentId</code>. La cola de despacho ahora lista
+        los envíos reales y enlaza aquí con el identificador correcto. También puedes
+        introducirlo manualmente.
       </Alert>
 
       <Card>

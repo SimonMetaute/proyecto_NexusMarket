@@ -118,6 +118,8 @@ Producto de catálogo:
 | POST | `/buyer/checkout` | `{ deliveryAddress, paymentMethod }` | `201 { orderId, buyerId, sellerId, total, orderStatus, creationDate }` |
 | GET | `/buyer/orders` | — | `200 [{ orderId, buyerId, sellerId, total, orderStatus, creationDate }]` |
 | GET | `/buyer/orders/:orderId` | — | `200 { orderId, total, status, orderStatus, items[] }` |
+| POST | `/buyer/orders/:orderId/returns` | `{ reason, evidence? }` | `201 { returnId, orderId, invoiceId, reason, returnStatus, status, requestDate, refundAmount, evidence?, receivedDate? }` |
+| GET | `/buyer/returns` | — | `200 Return[]` propias |
 
 `DeliveryAddress` (todos obligatorios salvo `reference`):
 
@@ -154,6 +156,8 @@ Reglas relevantes:
 - Carrito con productos de varios vendedores → `422`; carrito vacío en checkout → `400`.
 - Stock insuficiente en checkout → `422 INVALID_DOMAIN_VALUE`.
 - Checkout no es idempotente de forma explícita: un segundo checkout del mismo carrito devuelve `422`/`400` (nunca duplica el pedido en la práctica).
+- El checkout emite la `Invoice` de la orden (`invoiceId` es obligatorio en toda devolución).
+- Devoluciones: solo para órdenes `Delivered` y dentro de los **30 días** posteriores a la `deliveryDate` del envío entregado. Orden no entregada → `422`; ventana vencida → `422` (con `details.deliveryDate`); orden ajena → `403`; devolución activa duplicada → `409`. `evidence` es opcional (texto libre).
 
 ### 2.3 Portal Vendedor (`5174`)
 
@@ -164,6 +168,11 @@ Reglas relevantes:
 | GET | `/seller/warehouses` | — | `200 [{ warehouseId, sellerId, name, location, capacity, status, creationDate }]` |
 | POST | `/seller/warehouses` | `{ warehouseId, name, country, department, city, address, postalCode, capacity, status }` | `201 { warehouseId, name, status }` |
 | POST | `/seller/products` | `{ name, description, price, stock, sku?, brand?, category?, productStatus?, basePrice? }` | `201 { productId, name, status, sku, price }` |
+| GET | `/seller/products` | — | `200 Product[]` propios (incluye borradores) |
+| PUT | `/seller/products/:productId` | `{ name?, description?, price?, stock?, sku?, brand?, category?, basePrice? }` | `200 Product` |
+| GET | `/seller/products/:productId/images` | — | `200 ProductImage[]` |
+| POST | `/seller/products/:productId/images` | `{ url, altText?, position? }` | `201 ProductImage` |
+| DELETE | `/seller/products/:productId/images/:imageId` | — | `204` |
 | POST | `/seller/products/:productId/publish` | — | `200 { productId, status: "PUBLISHED", message }` |
 | POST | `/seller/products/:productId/variants` | `{ variantId, attribute, value, additionalPrice, skuVariant }` | `201 { variantId, attribute, value, skuVariant }` |
 | GET | `/seller/inventory` | — | `200 [{ inventoryId, productId, warehouseId, availableStock, reservedStock, totalStock, updateDate }]` |
@@ -171,40 +180,58 @@ Reglas relevantes:
 | GET | `/seller/orders` | — | `200 [{ orderId, buyerId, total, orderStatus, creationDate }]` |
 | POST | `/seller/orders/:orderId/approve` | — | `200 { orderId, orderStatus }` |
 | POST | `/seller/orders/:orderId/prepare` | — | `200 { orderId, orderStatus }` |
+| GET | `/seller/dashboard` | — | `200 { activeOrders, totalSales, totalOrders, totalProducts, publishedProducts, totalStock, pendingReturns, sellerId, commercialName, verificationStatus }` |
+
+`Product`: `{ productId, name, description, category?, sku?, sellerId, basePrice?, price, stock, productStatus, status, publicationDate?, brand?, createdAt }`.
+
+`ProductImage`: `{ imageId, productId, url, altText?, position, createdAt }`.
 
 Notas:
 - `status` de bodega ∈ `Operational | Closed | Maintenance` (case-sensitive).
 - `category` ∈ `Electronics, Home, Clothing and Accessories, Beauty, Sports, Toys, Office, Hardware, Automotive, Other`.
 - `productStatus` ∈ `Draft, Published, Inactive, Suspended, OutOfStock`; por defecto `Draft`.
-- Publicar exige vendedor verificado y producto propio; devuelve `403` si no.
+- Publicar exige vendedor verificado, producto propio, **SKU** y **al menos una imagen**; `403` si no es propio/verificado y `422 INVALID_DOMAIN_VALUE` (con `details.field = "sku" | "images"`) si falta el prerrequisito.
+- `GET/PUT /seller/products` y las imágenes se filtran por el `sellerId` del token: producto ajeno → `403`, inexistente → `404`.
 - Stock entry verifica producto y bodega propios: `404` si no existen, `403` si pertenecen a otro vendedor.
-- **No existe** endpoint para listar/editar/eliminar productos del vendedor; el catálogo público solo devuelve publicados. La vista de productos debe combinar catálogo (por `sellerId`) con los IDs creados en la sesión; ver §5.
 
 ### 2.4 Portal Administrador (`5175`)
 
 | Método | Ruta | Request | Response OK |
 |---|---|---|---|
-| GET | `/admin/users` | — | `200 []` (**stub**) |
+| GET | `/admin/users` | query: `role?`, `status?` | `200 [{ userId, userType, role, firstName, lastName, email, phone, identityDocument, registrationDate, status, updateDate }]` |
+| POST | `/admin/sellers/onboarding` | `{ account: { firstName, lastName, email, password, phone, identityDocumentType, identityDocumentNumber }, seller: { commercialName, personType }, warehouse: { name, country, department, city, address, postalCode, capacity } }` | `201 { userId, sellerId, warehouseId, email, role: "SELLER", status, sellerVerificationStatus }` |
 | POST | `/admin/sellers/:sellerId/approve` | — | `200 { sellerId, verificationStatus }` |
 | POST | `/admin/sellers/:sellerId/reject` | `{ reason }` | `200 { sellerId, verificationStatus }` |
-| GET | `/admin/dashboard` | — | `200 { activeOrders: 0, totalSales: 0 }` (**stub**) |
-| GET | `/supervisor/dashboard` | — | `200 { activeOrders: 0, totalSales: 0 }` (**stub**, rol `SUPERVISOR`) |
-| GET | `/supervisor/health` | — | `200 { status: "OK", uptime: 99.9 }` (**stub**, rol `SUPERVISOR`) |
+| GET | `/admin/audit-logs` | query: `actorId?`, `action?`, `from?` (ISO), `to?` (ISO), `page=1`, `limit=20` | `200 { items: [{ id, actorId, action, timestamp, details }], total, page, limit }` |
+| GET | `/admin/dashboard` | — | `200 { activeOrders, totalSales, totalOrders, totalUsers, totalSellers, totalProducts, publishedProducts, pendingReturns }` |
+| GET | `/supervisor/dashboard` | — | `200 { activeOrders, totalSales }` (rol `SUPERVISOR`) |
+| GET | `/supervisor/health` | — | `200 { status, uptime }` (rol `SUPERVISOR`) |
 
 Reglas relevantes:
+- Lecturas (`GET /admin/users`, `/admin/audit-logs`, `/admin/dashboard`) admiten `ADMINISTRATOR` y `SUPERVISOR`; las mutaciones exigen `ADMINISTRATOR`.
 - `approve`/`reject` reciben sólo `sellerId` en la ruta; el servicio recarga el agregado desde el repositorio antes de aplicar la transición, de modo que `approvalDate` y el resto de campos persistidos no se pierden.
-- `sellerId` inexistente → `404 RESOURCE_NOT_FOUND` (antes fallaba con `500` por invocar métodos de dominio sobre un objeto plano).
+- `sellerId` inexistente → `404 RESOURCE_NOT_FOUND`.
+- **Onboarding atómico:** usuario + perfil de vendedor + primera bodega se guardan dentro de una única transacción MySQL (`runInTransaction`). Si falla cualquier paso, se revierte todo; nunca queda un vendedor a medio provisionar. Email o nombre comercial duplicado → `409`. La auditoría (`SELLER_REGISTRATION`) se escribe en MongoDB después del `COMMIT` y es resiliente a fallos de Mongo.
+- `role` en `/admin/users` se resuelve al rol canónico (`BUYER`, `SELLER`, `ADMINISTRATOR`, `SUPERVISOR`, `LOGISTICS_OPERATOR`); `status` ∈ `Active | Inactive | Blocked | PendingVerification`. Valores desconocidos → `400`.
+- `audit-logs` se ordena por `timestamp` descendente y limita `limit` a 200.
+- Los KPIs del dashboard son agregaciones reales sobre `orders`, `users`, `sellers`, `products` y `product_returns` (sin valores fijos).
 
 ### 2.5 Portal Logística (`5176`)
 
 | Método | Ruta | Request | Response OK |
 |---|---|---|---|
 | GET | `/logistics/warehouses` | — | `200 [{ warehouseId, sellerId, name, location, capacity, status, creationDate }]` |
+| GET | `/logistics/shipments` | query: `status?`, `warehouseId?` | `200 [{ shipmentId, orderId, warehouseId, trackingCode, carrier, shipmentStatus, status, deliveryAddress, departureDate?, deliveryDate? }]` |
+| GET | `/logistics/returns` | query: `status?` | `200 [{ returnId, orderId, invoiceId, reason, returnStatus, status, requestDate, refundAmount, evidence?, receivedDate? }]` |
+| PATCH | `/logistics/returns/:returnId/receive` | — | `200 Return` con `receivedDate` y `returnStatus: "Completed"` |
 | POST | `/logistics/inventory/stock-entry` | `{ productId, warehouseId, quantity, receiptReference }` | `200 { inventoryId, availableStock, totalStock }` |
 | POST | `/logistics/shipments/:shipmentId/dispatch` | — | `200 { shipmentId, shipmentStatus }` (`404` si no existe) |
 | POST | `/logistics/shipments/:shipmentId/confirm-delivery` | — | `200 { shipmentId, shipmentStatus }` (`404` si no existe) |
 
-> No hay endpoint para listar envíos ni órdenes confirmadas: la cola de despacho del SDD no tiene fuente de datos hoy (§5).
+Reglas relevantes:
+- `dispatch` marca el envío `InTransit` y la orden asociada `Sent`; `confirm-delivery` marca el envío `Delivered`, fija `deliveryDate` y la orden `Delivered` (habilita la ventana de devolución de 30 días).
+- `status` de envío ∈ `Scheduled | InPreparation | InTransit | Delivered | Failed | Retained`; de devolución ∈ `Requested | InReview | Approved | Rejected | Completed`. Valor desconocido → `400`.
+- `receive` solo admite devoluciones no `Completed` ni `Rejected`; repetir la recepción → `422`. Devolución inexistente → `404`.
 
 ### 2.6 Endpoints legacy (no usar en el frontend nuevo)
 
@@ -228,7 +255,7 @@ Reglas relevantes:
 | Carrito `/cart` | `GET /buyer/cart`, `POST /buyer/cart` (si 404), `POST/PUT/DELETE /buyer/cart/items…` |
 | Checkout `/checkout` | `GET /buyer/addresses`, `POST /buyer/addresses`, `GET /buyer/payment-methods`, `POST /buyer/payment-methods`, `POST /buyer/checkout` |
 | Órdenes `/orders` | `GET /buyer/orders` |
-| Detalle orden `/orders/:id` | `GET /buyer/orders/:orderId` |
+| Detalle orden `/orders/:id` | `GET /buyer/orders/:orderId`, `POST /buyer/orders/:orderId/returns` (orden `Delivered`, ≤30 días), `GET /buyer/returns` |
 | Perfil (drawer) | `GET /buyer/profile`, `PUT /buyer/profile` |
 | Logout | `POST /auth/logout` |
 
@@ -237,9 +264,10 @@ Reglas relevantes:
 | Vista | Endpoints |
 |---|---|
 | Login | `POST /auth/login` |
-| Dashboard `/dashboard` | `GET /seller/profile`, `GET /seller/orders`, `GET /seller/inventory` |
-| Productos `/products` | `GET /catalog/products` (filtrado por `seller.sellerId`) |
-| Nuevo producto `/products/new` | `POST /seller/products`, `POST /seller/products/:id/variants`, `POST /seller/products/:id/publish` |
+| Dashboard `/dashboard` | `GET /seller/dashboard`, `GET /seller/profile`, `GET /seller/orders`, `GET /seller/inventory` |
+| Productos `/products` | `GET /seller/products` (propios, incluidos borradores), `POST /seller/products/:id/publish` |
+| Editar producto `/products/:id/edit` | `PUT /seller/products/:id`, `GET/POST /seller/products/:id/images`, `DELETE /seller/products/:id/images/:imageId`, `POST /seller/products/:id/publish` |
+| Nuevo producto `/products/new` | `POST /seller/products`, `POST /seller/products/:id/variants`, `POST /seller/products/:id/images`, `POST /seller/products/:id/publish` |
 | Inventario `/inventory` | `GET /seller/warehouses`, `POST /seller/warehouses`, `GET /seller/inventory`, `POST /seller/inventory/stock-entry` |
 | Órdenes `/orders` | `GET /seller/orders`, `POST /seller/orders/:id/approve`, `POST /seller/orders/:id/prepare` |
 
@@ -249,18 +277,18 @@ Reglas relevantes:
 |---|---|
 | Login | `POST /auth/login` |
 | Dashboard `/dashboard` | `GET /admin/dashboard`, `GET /supervisor/dashboard`, `GET /supervisor/health` |
-| Onboarding `/sellers/onboarding` | `POST /users` (rol `Seller`); no existe endpoint atómico seller+bodega |
-| Usuarios `/users` | `GET /admin/users` (stub vacío), `POST /admin/sellers/:id/approve`, `POST /admin/sellers/:id/reject` |
-| Auditoría `/audit-logs` | **Sin endpoint**; ver §5 |
+| Onboarding `/sellers/onboarding` | `POST /admin/sellers/onboarding` (atómico: usuario + vendedor + bodega) |
+| Usuarios `/users` | `GET /admin/users` (filtros `role`, `status`), `POST /admin/sellers/:id/approve`, `POST /admin/sellers/:id/reject` |
+| Auditoría `/audit-logs` | `GET /admin/audit-logs` (filtros `actorId`, `action`, `from`, `to`, paginación) |
 
 ### Logistics (`5176`)
 
 | Vista | Endpoints |
 |---|---|
 | Login | `POST /auth/login` |
-| Cola de despacho `/dispatch-queue` | **Sin endpoint** de listado de órdenes/envíos; ver §5 |
-| Envío `/shipments/:orderId` | `POST /logistics/shipments/:shipmentId/dispatch`, `POST /logistics/shipments/:shipmentId/confirm-delivery` |
-| Devoluciones `/returns` | **Sin endpoint**; ver §5 |
+| Cola de despacho `/dispatch-queue` | `GET /logistics/shipments` (filtros `status`, `warehouseId`) |
+| Envío `/shipments/:orderId` | `GET /logistics/shipments`, `POST /logistics/shipments/:shipmentId/dispatch`, `POST /logistics/shipments/:shipmentId/confirm-delivery` |
+| Devoluciones `/returns` | `GET /logistics/returns` (filtro `status`), `PATCH /logistics/returns/:returnId/receive` |
 
 ---
 
@@ -286,24 +314,39 @@ Reglas relevantes:
 | Stock entry | bodega/producto inexistente | `404 RESOURCE_NOT_FOUND` |
 | Orden seller | pedido inexistente o de otro vendedor | `404` / `403` |
 | Admin approve/reject | `sellerId` inexistente | `404 RESOURCE_NOT_FOUND` |
+| Admin onboarding | email o nombre comercial duplicado | `409 RESOURCE_ALREADY_EXISTS` |
+| Admin onboarding | fallo en cualquier paso | rollback completo (sin usuario/vendedor/bodega parcial) |
+| Imágenes producto | producto ajeno / imagen de otro producto | `403` / `404 RESOURCE_NOT_FOUND` |
+| Publicar producto | sin SKU o sin imágenes | `422 INVALID_DOMAIN_VALUE` (`details.field`) |
+| Devolución | orden no `Delivered` o ventana > 30 días | `422 INVALID_DOMAIN_VALUE` |
+| Devolución | devolución activa duplicada | `409 RESOURCE_ALREADY_EXISTS` |
+| Devolución | orden de otro comprador | `403 FORBIDDEN` |
+| Devolución logística | devolución inexistente / ya recibida | `404` / `422` |
+| Envíos logística | `status` desconocido | `400 INVALID_REQUEST` |
+| Filtros admin | `role`/`status`/fechas inválidas | `400 INVALID_REQUEST` + `details.field` |
 
 ---
 
 ## 5. Brechas del backend que afectan al frontend (sin mocks)
 
-Estas brechas están confirmadas en `backend/src` y condicionan la Fase 3. Se resolverán en UI con estados vacíos/explicativos, nunca con datos inventados.
+Las siguientes brechas fueron resueltas en esta fase (los endpoints ya son reales y están documentados en §2):
 
-1. **Audit logs (`/audit-logs`):** no existe endpoint. `AdministratorService.consultAuditLogs` devuelve `[]` y no está expuesto en rutas. La consola de auditoría no puede implementarse contra la API real todavía.
-2. **Gestión de usuarios (`/users`):** `GET /admin/users` devuelve siempre `[]` (`UserRepository` no tiene `findAll`). La tabla de usuarios mostrará estado vacío.
-3. **Onboarding atómico seller+bodega:** no existe endpoint transaccional. Solo `POST /users` (crea usuario `Seller` sin perfil verificado) y `POST /seller/warehouses` (requiere sesión SELLER). El flujo del SDD no es reproducible en una sola operación.
-4. **Productos del vendedor:** no hay `GET /seller/products` ni edición/borrado. El listado se deriva de `GET /catalog/products` y se filtra en cliente por `seller.sellerId`; el catálogo **no** acepta un filtro `sellerId` y devuelve también productos en estado distinto de `Published` (verificado). Los borradores persistidos sólo son visibles si el catálogo los incluye.
-5. **Imágenes de producto:** no existe campo ni endpoint de imágenes. La vista usará placeholder.
-6. **Variantes en catálogo:** el detalle público no incluye variantes; solo se pueden crear desde seller y no hay GET de variantes.
-7. **Cola de despacho y envíos:** no hay `GET /logistics/shipments` ni listado de órdenes confirmadas. `dispatch`/`confirm-delivery` operan por `shipmentId`, pero el frontend no puede descubrir ese ID desde la API.
-8. **Devoluciones:** `POST /buyer/returns` no existe (`BuyerService` lanza "not implemented"). El botón se mostrará deshabilitado con mensaje de funcionalidad no disponible.
-9. **Settlements / tienda / dashboard reales:** `GET /seller/store`, `GET /seller/settlements`, `GET /admin/dashboard` y `GET /supervisor/*` son stubs o no están expuestos (`activeOrders: 0`, `totalSales: 0`, `status: "OK"`).
-10. **Pago simulado:** no hay pasarela ni endpoint de pago. El checkout responde `201` (orden creada) o un error de dominio. Los tres estados del SDD se mapearán así: `201` → aprobado; `4xx` (400/409/422) → rechazado con mensaje del backend; timeout de red o `5xx` → resultado desconocido / pendiente de verificación. Nunca se declarará éxito sin `201`.
-11. **Serialización de entidades:** corregido para `GET /seller/inventory`, `GET /seller/warehouses`, `GET /logistics/warehouses` (`http/mappers/WarehouseMapper.ts`) y para `GET/PUT /buyer/profile`, `GET /buyer/addresses`, `GET /buyer/payment-methods` (`http/mappers/BuyerMapper.ts`). Antes se filtraban campos `_inventoryId`, `_warehouseId`, `location._country`, `_addressId`, `_maskedNumber`, ... Si se expone `GET /admin/users` en el futuro, debe mapearse para no filtrar `_password`.
+1. **Audit logs:** `GET /admin/audit-logs` pagina y filtra sobre `audit_db.audit_logs` (`MongoAuditLogRepository.query`).
+2. **Gestión de usuarios:** `GET /admin/users` lista usuarios reales con `role`/`status` (`UserRepository.findAll`).
+3. **Onboarding atómico seller+bodega:** `POST /admin/sellers/onboarding` ejecuta usuario + vendedor + bodega en una transacción MySQL con rollback completo.
+4. **Productos del vendedor:** `GET/PUT /seller/products` operan sobre los productos propios, incluidos borradores.
+5. **Imágenes de producto:** entidad `ProductImage`, tabla `product_images` y endpoints `GET/POST/DELETE`.
+6. **Cola de despacho y envíos:** `GET /logistics/shipments` con filtros por `status` y `warehouseId`.
+7. **Devoluciones:** `POST /buyer/orders/:orderId/returns`, `GET /buyer/returns`, `GET /logistics/returns` y `PATCH /logistics/returns/:returnId/receive`.
+8. **Dashboards reales:** `GET /admin/dashboard` y `GET /seller/dashboard` son agregaciones SQL reales.
+
+Brechas que **permanecen** (fuera del alcance de esta fase; la UI las trata con estados vacíos o deshabilitados, nunca con datos inventados):
+
+1. **Variantes en catálogo:** el detalle público no incluye variantes y no hay `GET` de variantes; sólo se pueden crear desde seller.
+2. **Settlements / tienda:** `GET /seller/store` y `GET /seller/settlements` no existen.
+3. **Dashboard de supervisor:** `GET /supervisor/dashboard` sigue devolviendo `{ activeOrders: 0, totalSales: 0 }`; el portal admin usa `/admin/dashboard` para los KPIs reales.
+4. **Pago simulado:** no hay pasarela ni endpoint de pago. El checkout responde `201` (orden creada) o un error de dominio. Los tres estados del SDD se mapean así: `201` → aprobado; `4xx` (400/409/422) → rechazado con mensaje del backend; timeout de red o `5xx` → resultado desconocido / pendiente de verificación. Nunca se declara éxito sin `201`.
+5. **Serialización de entidades:** `GET /seller/inventory`, `GET /seller/warehouses`, `GET /logistics/warehouses` (`WarehouseMapper`), `GET/PUT /buyer/profile`, `GET /buyer/addresses`, `GET /buyer/payment-methods` (`BuyerMapper`) y `GET /admin/users` (`UserMapper`, sin `_password`) están mapeados explícitamente.
 
 ---
 

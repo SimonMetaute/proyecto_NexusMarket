@@ -2,6 +2,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 import type { UserRepository } from '../../domain/ports/out/UserRepository.js';
 import { User, IdentityDocument, UserType } from '../../domain/model/user.js';
 import { pool } from '../database/mysql-pool.js';
+import { getExecutor } from '../database/mysql-transaction.js';
 
 interface UserRow extends RowDataPacket {
   userId: string;
@@ -40,7 +41,7 @@ function toDomain(row: UserRow): User {
 
 export class MySQLUserRepository implements UserRepository {
   async save(user: User): Promise<void> {
-    await pool.execute(
+    await getExecutor().execute(
       `INSERT INTO users (
         userId, userType, firstName, lastName, email, password, phone,
         identityDocumentType, identityDocumentNumber,
@@ -76,7 +77,7 @@ export class MySQLUserRepository implements UserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
-    const [rows] = await pool.query<UserRow[]>('SELECT * FROM users WHERE userId = ? LIMIT 1', [id]);
+    const [rows] = await getExecutor().query<UserRow[]>('SELECT * FROM users WHERE userId = ? LIMIT 1', [id]);
     const row = rows[0];
     if (row === undefined) {
       return null;
@@ -85,11 +86,16 @@ export class MySQLUserRepository implements UserRepository {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const [rows] = await pool.query<UserRow[]>('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+    const [rows] = await getExecutor().query<UserRow[]>('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
     const row = rows[0];
     if (row === undefined) {
       return null;
     }
     return toDomain(row);
+  }
+
+  async findAll(): Promise<User[]> {
+    const [rows] = await getExecutor().query<UserRow[]>('SELECT * FROM users ORDER BY registrationDate DESC');
+    return rows.map(toDomain);
   }
 }

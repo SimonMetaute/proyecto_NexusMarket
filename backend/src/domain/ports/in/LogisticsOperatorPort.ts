@@ -50,6 +50,15 @@ export interface ShipmentStatusUpdate {
   description: string;
 }
 
+export interface ShipmentQueueFilters {
+  status?: string;
+  warehouseId?: string;
+}
+
+export interface ReturnQueueFilters {
+  status?: string;
+}
+
 export interface LogisticsOperatorPort {
   // Warehouse Operations
   consultOperationalWarehouses(user: User): Promise<Warehouse[]>;
@@ -65,6 +74,7 @@ export interface LogisticsOperatorPort {
 
   // Shipment Preparation & Dispatch
   consultShipmentsReadyForDispatch(user: User): Promise<Shipment[]>;
+  consultShipments(user: User, filters: ShipmentQueueFilters): Promise<Shipment[]>;
   prepareShipment(user: User, shipment: Shipment): Promise<Shipment>;
   selectCarrier(user: User, shipment: Shipment, carrier: Carrier, service: string): Promise<Shipment>;
   calculateShippingCost(user: User, shipment: Shipment): Promise<ShippingCost>;
@@ -79,6 +89,8 @@ export interface LogisticsOperatorPort {
 
   // Return Receipt & Processing
   consultReturnShipmentsInTransit(user: User): Promise<Return[]>;
+  consultReturns(user: User, filters: ReturnQueueFilters): Promise<Return[]>;
+  receiveReturn(user: User, returnCase: Return): Promise<Return>;
   receiveReturnedStock(user: User, shipment: any): Promise<Shipment>;
   registerReturnedStock(user: User, inventory: Inventory, quantity: Quantity, condition: string): Promise<Inventory>;
 

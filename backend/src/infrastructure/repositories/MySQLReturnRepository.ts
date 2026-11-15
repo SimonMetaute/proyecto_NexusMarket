@@ -1,10 +1,10 @@
 import type { RowDataPacket } from 'mysql2/promise';
-import type { ReturnRepositoryPort } from '../../domain/ports/out/ReturnRepositoryPort.js';
+import type { ReturnRepositoryPort, ReturnQueryFilters } from '../../domain/ports/out/ReturnRepositoryPort.js';
 import { Return } from '../../domain/entities/Return.js';
 import type { Order } from '../../domain/entities/Order.js';
 import { ReturnReason, ReturnStatus } from '../../domain/model/enums.js';
 import { pool } from '../database/mysql-pool.js';
-import { toDate, toNumber } from './mappers/rowMappers.js';
+import { toDate, toNullableDate, toNumber } from './mappers/rowMappers.js';
 
 interface ReturnRow extends RowDataPacket {
   returnId: string;
@@ -15,6 +15,7 @@ interface ReturnRow extends RowDataPacket {
   requestDate: Date | string;
   refundAmount: number | string;
   evidence: string | null;
+  receivedDate: Date | string | null;
 }
 
 function toDomain(row: ReturnRow): Return {
@@ -27,6 +28,7 @@ function toDomain(row: ReturnRow): Return {
     requestDate: Date;
     refundAmount: number;
     evidence?: string;
+    receivedDate?: Date;
   } = {
     returnId: row.returnId,
     orderId: row.orderId,
@@ -40,6 +42,10 @@ function toDomain(row: ReturnRow): Return {
   if (row.evidence !== null) {
     params.evidence = row.evidence;
   }
+  const receivedDate = toNullableDate(row.receivedDate);
+  if (receivedDate !== undefined) {
+    params.receivedDate = receivedDate;
+  }
 
   return new Return(params);
 }
@@ -49,8 +55,8 @@ export class MySQLReturnRepository implements ReturnRepositoryPort {
     await pool.execute(
       `INSERT INTO product_returns (
         returnId, orderId, invoiceId, reason, returnStatus, requestDate,
-        refundAmount, evidence
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        refundAmount, evidence, receivedDate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         orderId = VALUES(orderId),
         invoiceId = VALUES(invoiceId),
@@ -58,7 +64,8 @@ export class MySQLReturnRepository implements ReturnRepositoryPort {
         returnStatus = VALUES(returnStatus),
         requestDate = VALUES(requestDate),
         refundAmount = VALUES(refundAmount),
-        evidence = VALUES(evidence)`,
+        evidence = VALUES(evidence),
+        receivedDate = VALUES(receivedDate)`,
       [
         returnCase.returnId,
         returnCase.orderId,
@@ -68,6 +75,7 @@ export class MySQLReturnRepository implements ReturnRepositoryPort {
         returnCase.requestDate,
         returnCase.refundAmount,
         returnCase.evidence ?? null,
+        returnCase.receivedDate ?? null,
       ],
     );
     return returnCase;
@@ -94,6 +102,29 @@ export class MySQLReturnRepository implements ReturnRepositoryPort {
     const [rows] = await pool.query<ReturnRow[]>(
       'SELECT * FROM product_returns WHERE returnStatus = ?',
       [status],
+    );
+    return rows.map(toDomain);
+  }
+
+  async findAll(filters: ReturnQueryFilters = {}): Promise<Return[]> {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (filters.status !== undefined) {
+      conditions.push('returnStatus = ?');
+      params.push(filters.status);
+    }
+    if (filters.orderId !== undefined) {
+      conditions.push('orderId = ?');
+      params.push(filters.orderId);
+    }
+    if (filters.invoiceId !== undefined) {
+      conditions.push('invoiceId = ?');
+      params.push(filters.invoiceId);
+    }
+    const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+    const [rows] = await pool.query<ReturnRow[]>(
+      `SELECT * FROM product_returns${where} ORDER BY requestDate DESC`,
+      params,
     );
     return rows.map(toDomain);
   }

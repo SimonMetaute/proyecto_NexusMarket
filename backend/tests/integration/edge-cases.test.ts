@@ -373,19 +373,50 @@ async function main(): Promise<void> {
       `status=${stockInGhostWarehouse.status} code=${stockInGhostWarehouse.body?.code}`,
     );
 
-    // SDD endpoints that are not wired yet: record the current behaviour so the
-    // report can flag them without failing the run.
-    const unimplemented = [
+    // Gaps that remain outside this phase: recorded so the report can flag them
+    // without failing the run.
+    const notImplemented = [
       ['GET', '/api/v1/seller/store'],
       ['GET', '/api/v1/seller/settlements'],
-      ['POST', '/api/v1/seller/shipments'],
-      ['POST', '/api/v1/buyer/returns'],
-      ['GET', '/api/v1/logistics/shipments'],
     ] as const;
-    for (const [method, path] of unimplemented) {
-      const response = await api(method, path, { token: sellerToken, body: method === 'POST' ? {} : undefined });
+    for (const [method, path] of notImplemented) {
+      const response = await api(method, path, { token: sellerToken });
       record(`SDD endpoint ${method} ${path}`, 'NOTE', `status=${response.status} code=${response.body?.code}`);
     }
+
+    // New endpoints exist: unauthorized roles hit the role guard (403), not 404.
+    const shipmentsForSeller = await api('GET', '/api/v1/logistics/shipments', { token: sellerToken });
+    check(
+      'logistics shipments route is wired (403 for SELLER)',
+      shipmentsForSeller.status === 403 && shipmentsForSeller.body?.code === 'FORBIDDEN',
+      `status=${shipmentsForSeller.status} code=${shipmentsForSeller.body?.code}`,
+    );
+
+    const returnsForSeller = await api('GET', '/api/v1/logistics/returns', { token: sellerToken });
+    check(
+      'logistics returns route is wired (403 for SELLER)',
+      returnsForSeller.status === 403 && returnsForSeller.body?.code === 'FORBIDDEN',
+      `status=${returnsForSeller.status} code=${returnsForSeller.body?.code}`,
+    );
+
+    // The legacy collection route never existed; returns are nested under an order.
+    const legacyReturns = await api('POST', '/api/v1/buyer/returns', { token: buyer.token, body: {} });
+    check(
+      'legacy POST /buyer/returns is gone -> 404',
+      legacyReturns.status === 404,
+      `status=${legacyReturns.status} code=${legacyReturns.body?.code}`,
+    );
+
+    const unknownOrderReturn = await api(
+      'POST',
+      `/api/v1/buyer/orders/${globalThis.crypto.randomUUID()}/returns`,
+      { token: buyer.token, body: { reason: 'Other' } },
+    );
+    check(
+      'return for an unknown order -> 404',
+      unknownOrderReturn.status === 404 && unknownOrderReturn.body?.code === 'RESOURCE_NOT_FOUND',
+      `status=${unknownOrderReturn.status} code=${unknownOrderReturn.body?.code}`,
+    );
   }
 
   // ------------------------------------------------------- logout revocation

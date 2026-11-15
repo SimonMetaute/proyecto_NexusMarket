@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "test": "npm run test:unit",
     "test:unit": "tsx tests/unit/errors.test.ts && tsx tests/unit/validator.test.ts",
-    "test:integration": "tsx tests/integration/audit-flow.test.ts"
+    "test:integration": "tsx tests/integration/audit-flow.test.ts && tsx tests/integration/edge-cases.test.ts && tsx tests/integration/new-endpoints.test.ts"
   },
   "keywords": [],
   "author": "",

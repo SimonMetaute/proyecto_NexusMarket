@@ -42,6 +42,18 @@ export async function initDb(): Promise<void> {
   `);
 
   await pool.execute(`
+    CREATE TABLE IF NOT EXISTS product_images (
+      imageId VARCHAR(36) PRIMARY KEY,
+      productId VARCHAR(36) NOT NULL,
+      url VARCHAR(1024) NOT NULL,
+      altText VARCHAR(255),
+      position INT NOT NULL DEFAULT 0,
+      createdAt DATETIME NOT NULL,
+      INDEX idx_product_images_product (productId)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+
+  await pool.execute(`
     CREATE TABLE IF NOT EXISTS buyers (
       buyerId VARCHAR(36) PRIMARY KEY,
       userId VARCHAR(36) NOT NULL UNIQUE,
@@ -303,6 +315,9 @@ async function migrateLegacySchema(): Promise<void> {
 
   await addColumnIfMissing('buyers', 'deliveryAddressesJson', 'TEXT NULL');
   await addColumnIfMissing('buyers', 'paymentMethodsJson', 'TEXT NULL');
+
+  // Physical reception timestamp for returns (logistics inbox).
+  await addColumnIfMissing('product_returns', 'receivedDate', 'DATETIME NULL');
 
   // Early builds named this column `attributeValue`; the canonical name is `value`.
   const hasAttributeValue = await columnExists('product_variants', 'attributeValue');

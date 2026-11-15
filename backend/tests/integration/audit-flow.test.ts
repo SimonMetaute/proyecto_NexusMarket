@@ -229,6 +229,15 @@ async function main(): Promise<void> {
       },
     });
     const publishId: string = publishProduct.body?.productId ?? '';
+    const publishImage = await api('POST', `/api/v1/seller/products/${publishId}/images`, {
+      token: sellerToken,
+      body: { url: 'https://cdn.example.com/audit-publish.png' },
+    });
+    check(
+      'add product image before publish',
+      publishImage.status === 201,
+      `status=${publishImage.status} body=${JSON.stringify(publishImage.body)}`,
+    );
     const published = await api('POST', `/api/v1/seller/products/${publishId}/publish`, { token: sellerToken });
     const afterPublish = await api('GET', `/api/v1/catalog/products/${publishId}`);
     check(

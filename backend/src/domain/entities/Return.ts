@@ -14,6 +14,7 @@ export class Return {
   private readonly _requestDate: Date;
   private _refundAmount: number;
   private _evidence?: string;
+  private _receivedDate?: Date;
 
   constructor(params: {
     returnId: string;
@@ -24,6 +25,7 @@ export class Return {
     requestDate: Date;
     refundAmount: number;
     evidence?: string;
+    receivedDate?: Date;
   }) {
     if (!params.returnId || params.returnId.trim().length === 0) {
       throw new Error('Return.returnId is required.');
@@ -47,6 +49,9 @@ export class Return {
     this._refundAmount = params.refundAmount;
     if (params.evidence !== undefined) {
       this._evidence = params.evidence.trim();
+    }
+    if (params.receivedDate !== undefined) {
+      this._receivedDate = params.receivedDate;
     }
   }
 
@@ -82,6 +87,10 @@ export class Return {
     return this._evidence;
   }
 
+  get receivedDate(): Date | undefined {
+    return this._receivedDate;
+  }
+
   putInReview(): void {
     this._returnStatus = ReturnStatus.IN_REVIEW;
   }
@@ -96,5 +105,14 @@ export class Return {
 
   complete(): void {
     this._returnStatus = ReturnStatus.COMPLETED;
+  }
+
+  /**
+   * Records the physical reception of the returned goods. The refund is only
+   * considered complete once the warehouse has the items back.
+   */
+  receive(receivedAt: Date = new Date()): void {
+    this._returnStatus = ReturnStatus.COMPLETED;
+    this._receivedDate = receivedAt;
   }
 }

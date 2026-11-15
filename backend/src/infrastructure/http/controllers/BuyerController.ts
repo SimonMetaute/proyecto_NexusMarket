@@ -26,6 +26,7 @@ import {
   toDeliveryAddressResponse,
   toPaymentMethodResponse,
 } from '../mappers/BuyerMapper.js';
+import { toReturnResponse } from '../mappers/ReturnMapper.js';
 
 function toDeliveryAddressDto(body: any): DeliveryAddressVO {
   return new DeliveryAddressVO({
@@ -382,5 +383,32 @@ export class BuyerController {
         subtotal: line.subtotal,
       })),
     });
+  }
+
+  async requestReturn(req: Request, res: Response): Promise<void> {
+    const user = req.user as User;
+    if (!user) {
+      throw ApiError.authenticationRequired();
+    }
+    const orderId = requireParam(asString(req.params.orderId), 'orderId');
+    const body = requireObject(req.body);
+    const reason = requireString(body, 'reason', { maxLength: 500 });
+    const evidence = optionalString(body, 'evidence', { maxLength: 2000 }) ?? '';
+    const returnCase = await this.buyerService.requestReturn(
+      user,
+      { orderId } as any,
+      reason,
+      evidence,
+    );
+    res.status(201).json(toReturnResponse(returnCase));
+  }
+
+  async consultMyReturns(req: Request, res: Response): Promise<void> {
+    const user = req.user as User;
+    if (!user) {
+      throw ApiError.authenticationRequired();
+    }
+    const returns = await this.buyerService.consultMyReturns(user);
+    res.status(200).json(returns.map(toReturnResponse));
   }
 }

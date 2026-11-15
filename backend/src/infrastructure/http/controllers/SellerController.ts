@@ -25,6 +25,9 @@ import { ProductVariant } from '../../../domain/entities/ProductVariant.js';
 import { Inventory } from '../../../domain/entities/Inventory.js';
 import { WarehouseLocation } from '../../../domain/model/value-objects.js';
 import { toWarehouseResponse } from '../mappers/WarehouseMapper.js';
+import { ProductMapper } from '../mappers/ProductMapper.js';
+import { toProductImageResponse } from '../mappers/ProductImageMapper.js';
+import { ProductCategory } from '../../../domain/model/enums.js';
 
 function asString(value: string | string[] | undefined): string | undefined {
   if (value === undefined) {
@@ -333,5 +336,85 @@ export class SellerController {
       orderId: updated.orderId,
       orderStatus: updated.orderStatus,
     });
+  }
+
+  async consultMyProducts(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const products = await this.sellerService.consultMyProducts(user);
+    res.status(200).json(products.map(ProductMapper.toResponse));
+  }
+
+  async updateMyProduct(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const productId = requireParam(asString(req.params.productId), 'productId');
+    const body = requireObject(req.body);
+
+    const changes: Record<string, unknown> = {};
+    const name = optionalString(body, 'name', { maxLength: 255 });
+    if (name !== undefined) changes.name = name;
+    const description = optionalString(body, 'description', { maxLength: 2000 });
+    if (description !== undefined) changes.description = description;
+    const brand = optionalString(body, 'brand', { maxLength: 100 });
+    if (brand !== undefined) changes.brand = brand;
+    const sku = optionalString(body, 'sku', { maxLength: 100 });
+    if (sku !== undefined) changes.sku = sku;
+
+    const category = optionalString(body, 'category', { maxLength: 100 });
+    if (category !== undefined) {
+      changes.category = requireEnum(body, 'category', Object.values(ProductCategory));
+    }
+    const basePrice = optionalNumber(body, 'basePrice');
+    if (basePrice !== undefined) changes.basePrice = basePrice;
+    const price = optionalNumber(body, 'price');
+    if (price !== undefined) changes.price = price;
+    const stock = optionalNumber(body, 'stock');
+    if (stock !== undefined) changes.stock = stock;
+
+    if (Object.keys(changes).length === 0) {
+      throw ApiError.invalidRequest('At least one updatable field is required.');
+    }
+
+    const updated = await this.sellerService.updateMyProduct(
+      user,
+      productId,
+      changes as any,
+    );
+    res.status(200).json(ProductMapper.toResponse(updated));
+  }
+
+  async consultProductImages(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const productId = requireParam(asString(req.params.productId), 'productId');
+    const images = await this.sellerService.consultProductImages(user, productId);
+    res.status(200).json(images.map(toProductImageResponse));
+  }
+
+  async addProductImage(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const productId = requireParam(asString(req.params.productId), 'productId');
+    const body = requireObject(req.body);
+    const url = requireString(body, 'url', { maxLength: 1024 });
+    const altText = optionalString(body, 'altText', { maxLength: 255 });
+    const position = optionalNumber(body, 'position');
+    const image = await this.sellerService.addProductImage(user, productId, {
+      url,
+      ...(altText !== undefined ? { altText } : {}),
+      ...(position !== undefined ? { position } : {}),
+    });
+    res.status(201).json(toProductImageResponse(image));
+  }
+
+  async removeProductImage(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const productId = requireParam(asString(req.params.productId), 'productId');
+    const imageId = requireParam(asString(req.params.imageId), 'imageId');
+    await this.sellerService.removeProductImage(user, productId, imageId);
+    res.status(204).send();
+  }
+
+  async consultMyDashboard(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const dashboard = await this.sellerService.consultMyDashboard(user);
+    res.status(200).json(dashboard);
   }
 }

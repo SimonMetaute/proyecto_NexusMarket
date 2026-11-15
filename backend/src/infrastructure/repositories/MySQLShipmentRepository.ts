@@ -1,5 +1,5 @@
 import type { RowDataPacket } from 'mysql2/promise';
-import type { ShipmentRepositoryPort } from '../../domain/ports/out/ShipmentRepositoryPort.js';
+import type { ShipmentRepositoryPort, ShipmentQueryFilters } from '../../domain/ports/out/ShipmentRepositoryPort.js';
 import { Carrier, Shipment } from '../../domain/entities/Shipment.js';
 import type { Order } from '../../domain/entities/Order.js';
 import { ShipmentStatus } from '../../domain/model/enums.js';
@@ -124,6 +124,25 @@ export class MySQLShipmentRepository implements ShipmentRepositoryPort {
     const [rows] = await pool.query<ShipmentRow[]>(
       'SELECT * FROM shipments WHERE shipmentStatus = ?',
       [status],
+    );
+    return rows.map(toDomain);
+  }
+
+  async findAll(filters: ShipmentQueryFilters = {}): Promise<Shipment[]> {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (filters.status !== undefined) {
+      conditions.push('shipmentStatus = ?');
+      params.push(filters.status);
+    }
+    if (filters.warehouseId !== undefined) {
+      conditions.push('warehouseId = ?');
+      params.push(filters.warehouseId);
+    }
+    const where = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+    const [rows] = await pool.query<ShipmentRow[]>(
+      `SELECT * FROM shipments${where} ORDER BY shipmentId DESC`,
+      params,
     );
     return rows.map(toDomain);
   }

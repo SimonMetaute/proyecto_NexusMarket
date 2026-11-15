@@ -14,6 +14,8 @@ import {
 } from '../validation/validator.js';
 import { Inventory } from '../../../domain/entities/Inventory.js';
 import { toWarehouseResponse } from '../mappers/WarehouseMapper.js';
+import { toShipmentResponse } from '../mappers/ShipmentMapper.js';
+import { toReturnResponse } from '../mappers/ReturnMapper.js';
 
 function asString(value: string | string[] | undefined): string | undefined {
   if (value === undefined) {
@@ -97,5 +99,36 @@ export class LogisticsController {
       shipmentId: updated.shipmentId,
       shipmentStatus: updated.shipmentStatus,
     });
+  }
+
+  async consultShipments(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const status = asString(req.query.status as string | string[] | undefined);
+    const warehouseId = asString(
+      req.query.warehouseId as string | string[] | undefined,
+    );
+    const shipments = await this.logisticsService.consultShipments(user, {
+      ...(status !== undefined ? { status } : {}),
+      ...(warehouseId !== undefined ? { warehouseId } : {}),
+    });
+    res.status(200).json(shipments.map(toShipmentResponse));
+  }
+
+  async consultReturns(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const status = asString(req.query.status as string | string[] | undefined);
+    const returns = await this.logisticsService.consultReturns(user, {
+      ...(status !== undefined ? { status } : {}),
+    });
+    res.status(200).json(returns.map(toReturnResponse));
+  }
+
+  async receiveReturn(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const returnId = requireParam(asString(req.params.returnId), 'returnId');
+    const updated = await this.logisticsService.receiveReturn(user, {
+      returnId,
+    } as any);
+    res.status(200).json(toReturnResponse(updated));
   }
 }

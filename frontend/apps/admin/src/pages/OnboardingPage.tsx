@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Button,
@@ -10,16 +10,15 @@ import {
   Input,
   PageHeader,
   Select,
-  createUser,
+  onboardSeller,
   toApiError,
 } from '@nexus/shared';
-import type { CreateUserRequest, UserResponse } from '@nexus/shared';
+import type { OnboardSellerRequest, OnboardSellerResponse } from '@nexus/shared';
 import { CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 
-export function OnboardingPage() {
-  const [form, setForm] = useState<CreateUserRequest>({
-    userType: 'Seller',
+const EMPTY_FORM: OnboardSellerRequest = {
+  account: {
     firstName: '',
     lastName: '',
     email: '',
@@ -27,15 +26,35 @@ export function OnboardingPage() {
     phone: '',
     identityDocumentType: 'CC',
     identityDocumentNumber: '',
-  });
-  const [created, setCreated] = useState<UserResponse | null>(null);
+  },
+  seller: {
+    commercialName: '',
+    personType: 'Natural',
+  },
+  warehouse: {
+    name: '',
+    country: 'Colombia',
+    department: '',
+    city: '',
+    address: '',
+    postalCode: '',
+    capacity: 100,
+  },
+};
+
+export function OnboardingPage() {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<OnboardSellerRequest>(EMPTY_FORM);
+  const [created, setCreated] = useState<OnboardSellerResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => createUser(form),
+    mutationFn: () => onboardSeller(form),
     onSuccess: (response) => {
       setCreated(response);
       setError(null);
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
     },
     onError: (caught) => {
       const apiError = toApiError(caught);
@@ -47,162 +66,159 @@ export function OnboardingPage() {
     },
   });
 
-  const update = <K extends keyof CreateUserRequest>(
+  const updateAccount = <K extends keyof OnboardSellerRequest['account']>(
     field: K,
-    value: CreateUserRequest[K],
-  ): void => setForm((current) => ({ ...current, [field]: value }));
+    value: OnboardSellerRequest['account'][K],
+  ): void =>
+    setForm((current) => ({
+      ...current,
+      account: { ...current.account, [field]: value },
+    }));
+
+  const updateSeller = <K extends keyof OnboardSellerRequest['seller']>(
+    field: K,
+    value: OnboardSellerRequest['seller'][K],
+  ): void =>
+    setForm((current) => ({
+      ...current,
+      seller: { ...current.seller, [field]: value },
+    }));
+
+  const updateWarehouse = <K extends keyof OnboardSellerRequest['warehouse']>(
+    field: K,
+    value: OnboardSellerRequest['warehouse'][K],
+  ): void =>
+    setForm((current) => ({
+      ...current,
+      warehouse: { ...current.warehouse, [field]: value },
+    }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Onboarding de vendedor"
-        description="Alta de la cuenta y su primera bodega."
+        description="Cuenta, perfil de vendedor y primera bodega en una sola transacción atómica."
       />
-
-      <Alert variant="warning" title="No existe onboarding atómico">
-        El contrato real no ofrece una transacción única seller + bodega. El único
-        endpoint disponible es <code>POST /users</code> (rol Seller). La bodega debe
-        crearla el vendedor desde su portal (5174) porque el backend exige un token
-        SELLER. No se simula la parte faltante.
-      </Alert>
 
       {created !== null ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Cuenta creada
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Vendedor
+              provisionado
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">User ID</span>
               <span className="font-mono text-xs">{created.userId}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Rol</span>
-              <span>{created.userType}</span>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Seller ID</span>
+              <span className="font-mono text-xs">{created.sellerId}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Warehouse ID</span>
+              <span className="font-mono text-xs">{created.warehouseId}</span>
+            </div>
+            <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Email</span>
               <span>{created.email}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Estado</span>
-              <span>{created.status}</span>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Verificación</span>
+              <span>{created.sellerVerificationStatus}</span>
             </div>
             <Alert variant="info" className="mt-3">
-              Siguiente paso: el vendedor inicia sesión en{' '}
-              <a
-                className="font-medium underline"
-                href="http://localhost:5174"
-              >
-                localhost:5174
-              </a>{' '}
-              y registra su bodega en Inventario. Un administrador puede aprobarlo desde
-              Usuarios con su sellerId.
+              Usuario, vendedor y bodega se confirmaron en la misma transacción.
+              Si cualquier paso hubiera fallado, no se habría creado ninguno. El
+              vendedor queda pendiente de aprobación en la vista de Usuarios.
             </Alert>
             <Button
               variant="outline"
               onClick={() => {
                 setCreated(null);
-                setForm((current) => ({
-                  ...current,
-                  firstName: '',
-                  lastName: '',
-                  email: '',
-                  password: '',
-                  phone: '',
-                  identityDocumentNumber: '',
-                }));
+                setForm(EMPTY_FORM);
               }}
             >
-              Crear otra cuenta
+              Crear otro vendedor
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Datos de la cuenta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              className="grid gap-4 sm:grid-cols-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                setError(null);
-                mutation.mutate();
-              }}
-            >
-              <FormField label="Tipo de usuario" htmlFor="userType">
-                <Select
-                  id="userType"
-                  value={form.userType}
-                  onChange={(event) =>
-                    update(
-                      'userType',
-                      event.target.value as CreateUserRequest['userType'],
-                    )
-                  }
-                >
-                  <option value="Seller">Seller</option>
-                  <option value="Buyer">Buyer</option>
-                  <option value="Administrator">Administrator</option>
-                </Select>
-              </FormField>
-              <FormField label="Teléfono" htmlFor="phone">
-                <Input
-                  id="phone"
-                  required
-                  minLength={5}
-                  value={form.phone}
-                  onChange={(event) => update('phone', event.target.value)}
-                />
-              </FormField>
+        <form
+          className="space-y-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setError(null);
+            mutation.mutate();
+          }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Cuenta de acceso</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
               <FormField label="Nombres" htmlFor="firstName">
                 <Input
                   id="firstName"
                   required
-                  value={form.firstName}
-                  onChange={(event) => update('firstName', event.target.value)}
+                  value={form.account.firstName}
+                  onChange={(event) =>
+                    updateAccount('firstName', event.target.value)
+                  }
                 />
               </FormField>
               <FormField label="Apellidos" htmlFor="lastName">
                 <Input
                   id="lastName"
                   required
-                  value={form.lastName}
-                  onChange={(event) => update('lastName', event.target.value)}
+                  value={form.account.lastName}
+                  onChange={(event) =>
+                    updateAccount('lastName', event.target.value)
+                  }
                 />
               </FormField>
-              <div className="sm:col-span-2">
-                <FormField label="Correo electrónico" htmlFor="email">
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={(event) => update('email', event.target.value)}
-                  />
-                </FormField>
-              </div>
+              <FormField label="Correo electrónico" htmlFor="email">
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={form.account.email}
+                  onChange={(event) => updateAccount('email', event.target.value)}
+                />
+              </FormField>
               <FormField label="Contraseña (mínimo 8)" htmlFor="password">
                 <Input
                   id="password"
                   type="password"
                   required
                   minLength={8}
-                  value={form.password}
-                  onChange={(event) => update('password', event.target.value)}
+                  value={form.account.password}
+                  onChange={(event) =>
+                    updateAccount('password', event.target.value)
+                  }
                 />
               </FormField>
-              <FormField label="Tipo de documento" htmlFor="identityDocumentType">
+              <FormField label="Teléfono" htmlFor="phone">
+                <Input
+                  id="phone"
+                  required
+                  minLength={5}
+                  value={form.account.phone}
+                  onChange={(event) => updateAccount('phone', event.target.value)}
+                />
+              </FormField>
+              <FormField
+                label="Tipo de documento"
+                htmlFor="identityDocumentType"
+              >
                 <Input
                   id="identityDocumentType"
                   required
-                  value={form.identityDocumentType}
+                  value={form.account.identityDocumentType}
                   onChange={(event) =>
-                    update('identityDocumentType', event.target.value)
+                    updateAccount('identityDocumentType', event.target.value)
                   }
                 />
               </FormField>
@@ -214,28 +230,140 @@ export function OnboardingPage() {
                   <Input
                     id="identityDocumentNumber"
                     required
-                    value={form.identityDocumentNumber}
+                    value={form.account.identityDocumentNumber}
                     onChange={(event) =>
-                      update('identityDocumentNumber', event.target.value)
+                      updateAccount('identityDocumentNumber', event.target.value)
                     }
                   />
                 </FormField>
               </div>
+            </CardContent>
+          </Card>
 
-              {error !== null ? (
-                <div className="sm:col-span-2">
-                  <Alert variant="error">{error}</Alert>
-                </div>
-              ) : null}
+          <Card>
+            <CardHeader>
+              <CardTitle>Perfil de vendedor</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Nombre comercial" htmlFor="commercialName">
+                <Input
+                  id="commercialName"
+                  required
+                  value={form.seller.commercialName}
+                  onChange={(event) =>
+                    updateSeller('commercialName', event.target.value)
+                  }
+                />
+              </FormField>
+              <FormField label="Tipo de persona" htmlFor="personType">
+                <Select
+                  id="personType"
+                  value={form.seller.personType}
+                  onChange={(event) =>
+                    updateSeller(
+                      'personType',
+                      event.target.value as 'Natural' | 'Legal',
+                    )
+                  }
+                >
+                  <option value="Natural">Natural</option>
+                  <option value="Legal">Legal</option>
+                </Select>
+              </FormField>
+            </CardContent>
+          </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Primera bodega</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Nombre" htmlFor="warehouseName">
+                <Input
+                  id="warehouseName"
+                  required
+                  value={form.warehouse.name}
+                  onChange={(event) =>
+                    updateWarehouse('name', event.target.value)
+                  }
+                />
+              </FormField>
+              <FormField label="País" htmlFor="country">
+                <Input
+                  id="country"
+                  required
+                  value={form.warehouse.country}
+                  onChange={(event) =>
+                    updateWarehouse('country', event.target.value)
+                  }
+                />
+              </FormField>
+              <FormField label="Departamento" htmlFor="department">
+                <Input
+                  id="department"
+                  required
+                  value={form.warehouse.department}
+                  onChange={(event) =>
+                    updateWarehouse('department', event.target.value)
+                  }
+                />
+              </FormField>
+              <FormField label="Ciudad" htmlFor="city">
+                <Input
+                  id="city"
+                  required
+                  value={form.warehouse.city}
+                  onChange={(event) =>
+                    updateWarehouse('city', event.target.value)
+                  }
+                />
+              </FormField>
               <div className="sm:col-span-2">
-                <Button type="submit" loading={mutation.isPending}>
-                  Crear cuenta
-                </Button>
+                <FormField label="Dirección" htmlFor="address">
+                  <Input
+                    id="address"
+                    required
+                    value={form.warehouse.address}
+                    onChange={(event) =>
+                      updateWarehouse('address', event.target.value)
+                    }
+                  />
+                </FormField>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+              <FormField label="Código postal" htmlFor="postalCode">
+                <Input
+                  id="postalCode"
+                  required
+                  value={form.warehouse.postalCode}
+                  onChange={(event) =>
+                    updateWarehouse('postalCode', event.target.value)
+                  }
+                />
+              </FormField>
+              <FormField label="Capacidad" htmlFor="capacity">
+                <Input
+                  id="capacity"
+                  type="number"
+                  min={1}
+                  required
+                  value={form.warehouse.capacity}
+                  onChange={(event) =>
+                    updateWarehouse(
+                      'capacity',
+                      Number.parseInt(event.target.value, 10) || 1,
+                    )
+                  }
+                />
+              </FormField>
+            </CardContent>
+          </Card>
+
+          {error !== null ? <Alert variant="error">{error}</Alert> : null}
+
+          <Button type="submit" loading={mutation.isPending}>
+            Provisionar vendedor
+          </Button>
+        </form>
       )}
     </div>
   );

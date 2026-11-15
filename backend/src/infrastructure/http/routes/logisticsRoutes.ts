@@ -23,6 +23,30 @@ export function createLogisticsRoutes(
       logisticsController.consultOperationalWarehouses(req, res),
     ),
   );
+  router.get(
+    '/logistics/shipments',
+    authMiddleware,
+    requireRole('LOGISTICS_OPERATOR'),
+    asyncHandler((req: Request, res: Response) =>
+      logisticsController.consultShipments(req, res),
+    ),
+  );
+  router.get(
+    '/logistics/returns',
+    authMiddleware,
+    requireRole('LOGISTICS_OPERATOR'),
+    asyncHandler((req: Request, res: Response) =>
+      logisticsController.consultReturns(req, res),
+    ),
+  );
+  router.patch(
+    '/logistics/returns/:returnId/receive',
+    authMiddleware,
+    requireRole('LOGISTICS_OPERATOR'),
+    asyncHandler((req: Request, res: Response) =>
+      logisticsController.receiveReturn(req, res),
+    ),
+  );
   router.post(
     '/logistics/inventory/stock-entry',
     authMiddleware,

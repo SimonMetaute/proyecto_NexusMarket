@@ -1,6 +1,14 @@
-import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
-import type { AuditLog } from '../../domain/model/AuditLog.js';
+import type { AuditLogRepository, AuditLogPage, AuditLogQueryFilters } from '../../domain/ports/out/AuditLogRepository.js';
+import { AuditLog } from '../../domain/model/AuditLog.js';
 import { getAuditDb, initMongo, isMongoInitialized } from '../database/mongo-connection.js';
+
+interface AuditLogDocument {
+  _id: string;
+  actorId: string;
+  action: string;
+  timestamp: Date;
+  details: Record<string, unknown>;
+}
 
 /**
  * MongoDB adapter for audit persistence (append-only).
@@ -40,13 +48,7 @@ export class MongoAuditLogRepository implements AuditLogRepository {
   private async insert(log: AuditLog): Promise<void> {
     const db = getAuditDb();
     await db
-      .collection<{
-        _id: string;
-        actorId: string;
-        action: string;
-        timestamp: Date;
-        details: Record<string, unknown>;
-      }>('audit_logs')
+      .collection<AuditLogDocument>('audit_logs')
       .insertOne({
         _id: log.id,
         actorId: log.actorId,
@@ -54,5 +56,57 @@ export class MongoAuditLogRepository implements AuditLogRepository {
         timestamp: log.timestamp,
         details: log.details,
       });
+  }
+
+  async query(
+    filters: AuditLogQueryFilters,
+    page: number,
+    limit: number,
+  ): Promise<AuditLogPage> {
+    if (!isMongoInitialized()) {
+      await initMongo();
+    }
+    const query: Record<string, unknown> = {};
+    if (filters.actorId !== undefined) {
+      query.actorId = filters.actorId;
+    }
+    if (filters.action !== undefined) {
+      query.action = filters.action;
+    }
+    if (filters.from !== undefined || filters.to !== undefined) {
+      const range: Record<string, Date> = {};
+      if (filters.from !== undefined) {
+        range.$gte = filters.from;
+      }
+      if (filters.to !== undefined) {
+        range.$lte = filters.to;
+      }
+      query.timestamp = range;
+    }
+
+    const collection = getAuditDb().collection<AuditLogDocument>('audit_logs');
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? Math.min(limit, 200) : 20;
+    const [total, documents] = await Promise.all([
+      collection.countDocuments(query),
+      collection
+        .find(query)
+        .sort({ timestamp: -1, _id: -1 })
+        .skip((safePage - 1) * safeLimit)
+        .limit(safeLimit)
+        .toArray(),
+    ]);
+
+    const items = documents.map(
+      (document) =>
+        new AuditLog({
+          id: document._id,
+          actorId: document.actorId,
+          action: document.action,
+          timestamp: document.timestamp,
+          details: document.details,
+        }),
+    );
+    return { items, total, page: safePage, limit: safeLimit };
   }
 }

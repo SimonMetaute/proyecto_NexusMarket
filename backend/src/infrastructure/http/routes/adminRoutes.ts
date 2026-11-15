@@ -1,6 +1,7 @@
 /**
  * Routes: Administrator
- * All endpoints require authentication and ADMINISTRATOR role.
+ * Read endpoints allow ADMINISTRATOR and SUPERVISOR; mutations require
+ * ADMINISTRATOR.
  */
 import type { Request, Response } from 'express';
 import { Router } from 'express';
@@ -18,9 +19,17 @@ export function createAdminRoutes(
   router.get(
     '/admin/users',
     authMiddleware,
-    requireRole('ADMINISTRATOR'),
+    requireRole('ADMINISTRATOR', 'SUPERVISOR'),
     asyncHandler((req: Request, res: Response) =>
       adminController.consultUsers(req, res),
+    ),
+  );
+  router.post(
+    '/admin/sellers/onboarding',
+    authMiddleware,
+    requireRole('ADMINISTRATOR'),
+    asyncHandler((req: Request, res: Response) =>
+      adminController.onboardSeller(req, res),
     ),
   );
   router.post(
@@ -40,9 +49,17 @@ export function createAdminRoutes(
     ),
   );
   router.get(
+    '/admin/audit-logs',
+    authMiddleware,
+    requireRole('ADMINISTRATOR', 'SUPERVISOR'),
+    asyncHandler((req: Request, res: Response) =>
+      adminController.consultAuditLogs(req, res),
+    ),
+  );
+  router.get(
     '/admin/dashboard',
     authMiddleware,
-    requireRole('ADMINISTRATOR'),
+    requireRole('ADMINISTRATOR', 'SUPERVISOR'),
     asyncHandler((req: Request, res: Response) =>
       adminController.consultOperationalDashboard(req, res),
     ),

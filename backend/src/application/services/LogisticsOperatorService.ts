@@ -12,6 +12,8 @@ import type {
   Carrier,
   ShippingCost,
   ShipmentStatusUpdate,
+  ShipmentQueueFilters,
+  ReturnQueueFilters,
 } from '../../domain/ports/in/LogisticsOperatorPort.js';
 import type { User } from '../../domain/model/user.js';
 import { Warehouse } from '../../domain/entities/Warehouse.js';
@@ -27,8 +29,12 @@ import type { ReturnRepositoryPort } from '../../domain/ports/out/ReturnReposito
 import type { ProductRepository } from '../../domain/ports/out/ProductRepository.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 import { AuditLog } from '../../domain/model/AuditLog.js';
-import { WarehouseStatus } from '../../domain/model/enums.js';
-import { ShipmentStatus } from '../../domain/model/enums.js';
+import {
+  OrderStatus,
+  ReturnStatus,
+  ShipmentStatus,
+  WarehouseStatus,
+} from '../../domain/model/enums.js';
 import { InventoryMovementType } from '../../domain/ports/in/LogisticsOperatorPort.js';
 
 import { ApiError } from '../../domain/errors/ApiError.js';
@@ -161,6 +167,27 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
     return all.filter((s) => s.shipmentStatus === ShipmentStatus.SCHEDULED);
   }
 
+  async consultShipments(user: User, filters: ShipmentQueueFilters): Promise<Shipment[]> {
+    const requested = filters.status;
+    const status =
+      requested !== undefined
+        ? Object.values(ShipmentStatus).find(
+            (candidate) =>
+              candidate.toLowerCase() === String(requested).toLowerCase() ||
+              candidate.toLowerCase() === String(requested).replace(/[\s_-]/g, '').toLowerCase(),
+          )
+        : undefined;
+    if (requested !== undefined && status === undefined) {
+      throw ApiError.invalidRequest(`Unknown shipment status '${requested}'.`, {
+        field: 'status',
+      });
+    }
+    return this.shipmentRepository.findAll({
+      ...(status !== undefined ? { status } : {}),
+      ...(filters.warehouseId !== undefined ? { warehouseId: filters.warehouseId } : {}),
+    });
+  }
+
   async prepareShipment(user: User, shipment: Shipment): Promise<Shipment> {
     shipment.prepare();
     return shipment;
@@ -181,6 +208,24 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
     }
     found.dispatch();
     await this.shipmentRepository.save(found);
+
+    const order = await this.orderRepository.findByIdentifier({
+      orderId: found.orderId,
+    } as Order);
+    if (order !== null) {
+      order.send();
+      await this.orderRepository.save(order);
+    }
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'SHIPMENT_DISPATCH',
+        timestamp: new Date(),
+        details: { shipmentId: found.shipmentId, orderId: found.orderId },
+      }),
+    );
     return found;
   }
 
@@ -209,12 +254,88 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
     }
     found.deliver();
     await this.shipmentRepository.save(found);
+
+    const order = await this.orderRepository.findByIdentifier({
+      orderId: found.orderId,
+    } as Order);
+    if (order !== null) {
+      order.deliver();
+      await this.orderRepository.save(order);
+    }
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'SHIPMENT_DELIVERED',
+        timestamp: new Date(),
+        details: {
+          shipmentId: found.shipmentId,
+          orderId: found.orderId,
+          deliveryDate: found.deliveryDate?.toISOString(),
+        },
+      }),
+    );
     return found;
   }
 
   // --- Return Receipt & Processing ---
   async consultReturnShipmentsInTransit(user: User): Promise<Return[]> {
-    return [];
+    return this.returnRepository.findAll({ status: ReturnStatus.APPROVED });
+  }
+
+  async consultReturns(user: User, filters: ReturnQueueFilters): Promise<Return[]> {
+    const requested = filters.status;
+    const status =
+      requested !== undefined
+        ? Object.values(ReturnStatus).find(
+            (candidate) =>
+              candidate.toLowerCase() === String(requested).toLowerCase() ||
+              candidate.toLowerCase() === String(requested).replace(/[\s_-]/g, '').toLowerCase(),
+          )
+        : undefined;
+    if (requested !== undefined && status === undefined) {
+      throw ApiError.invalidRequest(`Unknown return status '${requested}'.`, {
+        field: 'status',
+      });
+    }
+    return this.returnRepository.findAll(status !== undefined ? { status } : {});
+  }
+
+  async receiveReturn(user: User, returnCase: Return): Promise<Return> {
+    const found = await this.returnRepository.findByIdentifier(returnCase);
+    if (!found) {
+      throw ApiError.notFound(`Return ${returnCase.returnId} not found`);
+    }
+    if (found.returnStatus === ReturnStatus.COMPLETED) {
+      throw ApiError.invalidDomainValue(
+        `Return ${found.returnId} was already received.`,
+        { field: 'returnStatus' },
+      );
+    }
+    if (found.returnStatus === ReturnStatus.REJECTED) {
+      throw ApiError.invalidDomainValue(
+        `Return ${found.returnId} was rejected and cannot be received.`,
+        { field: 'returnStatus' },
+      );
+    }
+    found.receive();
+    await this.returnRepository.save(found);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'RETURN_RECEIVED',
+        timestamp: new Date(),
+        details: {
+          returnId: found.returnId,
+          orderId: found.orderId,
+          receivedDate: found.receivedDate?.toISOString(),
+        },
+      }),
+    );
+    return found;
   }
 
   async receiveReturnedStock(user: User, shipment: any): Promise<Shipment> {

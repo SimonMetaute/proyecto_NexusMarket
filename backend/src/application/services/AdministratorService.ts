@@ -26,10 +26,12 @@ import type {
   OperationalDashboard,
   AnomalyAlert,
   AuditReconciliationRequest,
+  AuditLogPageResult,
+  OnboardSellerParams,
+  OnboardSellerResult,
 } from '../../domain/ports/in/AdministratorPort.js';
-import { User, UserType, IdentityDocument } from '../../domain/model/user.js';
+import { User, UserType, IdentityDocument, resolveUserRole } from '../../domain/model/user.js';
 import type { Buyer } from '../../domain/entities/Buyer.js';
-import type { Seller } from '../../domain/entities/Seller.js';
 import type { Product } from '../../domain/entities/Product.js';
 import type { Payment } from '../../domain/entities/Payment.js';
 import type { Return } from '../../domain/entities/Return.js';
@@ -45,7 +47,14 @@ import type { PaymentRepositoryPort } from '../../domain/ports/out/PaymentReposi
 import type { OperationRepositoryPort } from '../../domain/ports/out/OperationRepositoryPort.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 import type { Operation } from '../../domain/ports/in/AdministratorPort.js';
-import { SellerVerificationStatus } from '../../domain/model/enums.js';
+import { Seller } from '../../domain/entities/Seller.js';
+import { Warehouse } from '../../domain/entities/Warehouse.js';
+import { WarehouseLocation } from '../../domain/model/value-objects.js';
+import type { WarehouseRepositoryPort } from '../../domain/ports/out/WarehouseRepositoryPort.js';
+import type { AnalyticsRepositoryPort } from '../../domain/ports/out/AnalyticsRepositoryPort.js';
+import type { TransactionManagerPort } from '../../domain/ports/out/TransactionManagerPort.js';
+import type { PasswordServicePort } from '../../domain/ports/out/PasswordServicePort.js';
+import { PersonType, SellerVerificationStatus, WarehouseStatus } from '../../domain/model/enums.js';
 import { ApiError } from '../../domain/errors/ApiError.js';
 
 export class AdministratorService implements AdministratorPort {
@@ -60,6 +69,10 @@ export class AdministratorService implements AdministratorPort {
     private readonly paymentRepository: PaymentRepositoryPort,
     private readonly operationRepository: OperationRepositoryPort,
     private readonly auditLogRepository: AuditLogRepository,
+    private readonly warehouseRepository: WarehouseRepositoryPort,
+    private readonly analyticsRepository: AnalyticsRepositoryPort,
+    private readonly transactionManager: TransactionManagerPort,
+    private readonly passwordService: PasswordServicePort,
   ) {}
 
   // --- User Management ---
@@ -83,8 +96,122 @@ export class AdministratorService implements AdministratorPort {
   }
 
   async consultUsers(user: User, criteria: UserFilterCriteria): Promise<User[]> {
-    // UserRepository has no findAll; return empty list for now.
-    return [];
+    const users = await this.userRepository.findAll();
+    return users.filter((candidate) => {
+      if (criteria.role !== undefined) {
+        const requested = String(criteria.role).toUpperCase();
+        const candidateRole = String(candidate.userType).toUpperCase();
+        const resolved = String(resolveUserRole(candidate.userType)).toUpperCase();
+        if (requested !== candidateRole && requested !== resolved) {
+          return false;
+        }
+      }
+      if (criteria.status !== undefined && candidate.status !== criteria.status) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /**
+   * Atomic seller onboarding: account + seller profile + first warehouse are
+   * persisted inside one MySQL transaction. A failure in any step rolls back
+   * the whole unit of work, so a half-provisioned seller can never exist.
+   */
+  async onboardSeller(user: User, params: OnboardSellerParams): Promise<OnboardSellerResult> {
+    const existingEmail = await this.userRepository.findByEmail(params.account.email);
+    if (existingEmail !== null) {
+      throw ApiError.alreadyExists(`Email ${params.account.email} already registered`);
+    }
+    const existingSeller = await this.sellerRepository.findByCommercialName(
+      params.seller.commercialName,
+    );
+    if (existingSeller !== null) {
+      throw ApiError.alreadyExists(
+        `Commercial name ${params.seller.commercialName} already registered`,
+      );
+    }
+
+    const now = new Date();
+    const passwordHash = await this.passwordService.hash(params.account.password);
+    const userEntity = new User({
+      userId: globalThis.crypto.randomUUID(),
+      userType: UserType.Seller,
+      firstName: params.account.firstName,
+      lastName: params.account.lastName,
+      email: params.account.email,
+      password: passwordHash,
+      phone: params.account.phone,
+      identityDocument: new IdentityDocument(
+        params.account.identityDocumentType,
+        params.account.identityDocumentNumber,
+      ),
+      registrationDate: now,
+      status: 'Active',
+      updateDate: now,
+    });
+    const sellerEntity = new Seller({
+      sellerId: globalThis.crypto.randomUUID(),
+      userId: userEntity.userId,
+      commercialName: params.seller.commercialName,
+      personType:
+        params.seller.personType === 'Legal' ? PersonType.LEGAL : PersonType.NATURAL,
+      verificationStatus: SellerVerificationStatus.PENDING,
+    });
+    const warehouseEntity = new Warehouse({
+      warehouseId: globalThis.crypto.randomUUID(),
+      sellerId: sellerEntity.sellerId,
+      name: params.warehouse.name,
+      location: new WarehouseLocation({
+        country: params.warehouse.country,
+        department: params.warehouse.department,
+        city: params.warehouse.city,
+        address: params.warehouse.address,
+        postalCode: params.warehouse.postalCode,
+      }),
+      capacity: params.warehouse.capacity,
+      status: WarehouseStatus.OPERATIONAL,
+      creationDate: now,
+    });
+
+    try {
+      await this.transactionManager.runInTransaction(async () => {
+        await this.userRepository.save(userEntity);
+        await this.sellerRepository.save(sellerEntity);
+        await this.warehouseRepository.save(warehouseEntity);
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('Duplicate entry')) {
+        throw ApiError.alreadyExists('Email or commercial name already registered');
+      }
+      throw error;
+    }
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'SELLER_REGISTRATION',
+        timestamp: new Date(),
+        details: {
+          userId: userEntity.userId,
+          sellerId: sellerEntity.sellerId,
+          warehouseId: warehouseEntity.warehouseId,
+          commercialName: sellerEntity.commercialName,
+        },
+      }),
+    );
+
+    return {
+      userId: userEntity.userId,
+      sellerId: sellerEntity.sellerId,
+      warehouseId: warehouseEntity.warehouseId,
+      email: userEntity.email,
+      role: 'SELLER',
+      status: userEntity.status,
+      sellerVerificationStatus: sellerEntity.verificationStatus,
+    };
   }
 
   async consultUserDetails(user: User, targetUser: User): Promise<User> {
@@ -346,7 +473,17 @@ export class AdministratorService implements AdministratorPort {
 
   // --- Operational Monitoring & Alerts ---
   async consultOperationalDashboard(user: User): Promise<OperationalDashboard> {
-    return { activeOrders: 0, totalSales: 0 };
+    const stats = await this.analyticsRepository.getAdminDashboard();
+    return {
+      activeOrders: stats.activeOrders,
+      totalSales: stats.totalSales,
+      totalOrders: stats.totalOrders,
+      totalUsers: stats.totalUsers,
+      totalSellers: stats.totalSellers,
+      totalProducts: stats.totalProducts,
+      publishedProducts: stats.publishedProducts,
+      pendingReturns: stats.pendingReturns,
+    };
   }
 
   async consultActiveAnomalies(user: User): Promise<AnomalyAlert[]> {
@@ -358,8 +495,22 @@ export class AdministratorService implements AdministratorPort {
   }
 
   // --- Audit & Compliance ---
-  async consultAuditLogs(user: User, criteria: AuditFilterCriteria): Promise<AuditLog[]> {
-    return [];
+  async consultAuditLogs(
+    user: User,
+    criteria: AuditFilterCriteria,
+    page = 1,
+    limit = 20,
+  ): Promise<AuditLogPageResult> {
+    return this.auditLogRepository.query(
+      {
+        ...(criteria.actorId !== undefined ? { actorId: criteria.actorId } : {}),
+        ...(criteria.action !== undefined ? { action: criteria.action } : {}),
+        ...(criteria.from !== undefined ? { from: criteria.from } : {}),
+        ...(criteria.to !== undefined ? { to: criteria.to } : {}),
+      },
+      page,
+      limit,
+    );
   }
 
   async consultAllOperations(user: User, criteria: OperationFilterCriteria): Promise<Operation[]> {

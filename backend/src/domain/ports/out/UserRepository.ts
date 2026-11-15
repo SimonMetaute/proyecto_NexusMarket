@@ -37,4 +37,10 @@ export interface UserRepository {
    * @returns the User if it exists, otherwise null.
    */
   findByEmail(email: string): Promise<User | null>;
+
+  /**
+   * Lists every registered account. Used by the administrator console and by
+   * dashboard aggregates; never expose the password hash at the HTTP boundary.
+   */
+  findAll(): Promise<User[]>;
 }

@@ -198,7 +198,26 @@ export interface OrderDetail {
   total: number;
   status?: string;
   orderStatus: string;
+  deliveryDate?: string;
   items: OrderLine[];
+}
+
+export interface ReturnCase {
+  returnId: string;
+  orderId: string;
+  invoiceId: string;
+  reason: string;
+  returnStatus: string;
+  status: string;
+  requestDate: string;
+  refundAmount: number;
+  evidence?: string;
+  receivedDate?: string;
+}
+
+export interface RequestReturnRequest {
+  reason: string;
+  evidence?: string;
 }
 
 /* ---------------------------------- Vendedor --------------------------------- */
@@ -319,11 +338,140 @@ export interface OrderStatusActionResponse {
   orderStatus: string;
 }
 
+export interface SellerProduct {
+  productId: string;
+  name: string;
+  description: string;
+  category?: string;
+  sku?: string;
+  sellerId: string;
+  basePrice?: number;
+  price: number;
+  stock: number;
+  productStatus: string;
+  status: string;
+  publicationDate?: string;
+  brand?: string;
+  createdAt: string;
+}
+
+export interface ProductImage {
+  imageId: string;
+  productId: string;
+  url: string;
+  altText?: string;
+  position: number;
+  createdAt: string;
+}
+
+export interface AddProductImageRequest {
+  url: string;
+  altText?: string;
+  position?: number;
+}
+
+export interface UpdateProductRequest {
+  name?: string;
+  description?: string;
+  price?: number;
+  stock?: number;
+  sku?: string;
+  brand?: string;
+  category?: string;
+  basePrice?: number;
+}
+
+export interface SellerDashboard {
+  activeOrders: number;
+  totalSales: number;
+  totalOrders: number;
+  totalProducts: number;
+  publishedProducts: number;
+  totalStock: number;
+  pendingReturns: number;
+  sellerId: string;
+  commercialName: string;
+  verificationStatus: string;
+}
+
 /* ------------------------------ Administración ------------------------------ */
 
 export interface DashboardSummary {
   activeOrders: number;
   totalSales: number;
+}
+
+export interface AdminDashboardSummary extends DashboardSummary {
+  totalOrders: number;
+  totalUsers: number;
+  totalSellers: number;
+  totalProducts: number;
+  publishedProducts: number;
+  pendingReturns: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  action: string;
+  timestamp: string;
+  details: Record<string, unknown>;
+}
+
+export interface AuditLogPage {
+  items: AuditLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface AuditLogQuery {
+  actorId?: string;
+  action?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminUserFilters {
+  role?: string;
+  status?: string;
+}
+
+export interface OnboardSellerRequest {
+  account: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phone: string;
+    identityDocumentType: string;
+    identityDocumentNumber: string;
+  };
+  seller: {
+    commercialName: string;
+    personType: 'Natural' | 'Legal';
+  };
+  warehouse: {
+    name: string;
+    country: string;
+    department: string;
+    city: string;
+    address: string;
+    postalCode: string;
+    capacity: number;
+  };
+}
+
+export interface OnboardSellerResponse {
+  userId: string;
+  sellerId: string;
+  warehouseId: string;
+  email: string;
+  role: string;
+  status: string;
+  sellerVerificationStatus: string;
 }
 
 export interface HealthSummary {
@@ -338,10 +486,17 @@ export interface SellerApprovalResponse {
 
 export interface AdminUser {
   userId: string;
+  userType: string;
   email: string;
   role: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  identityDocument?: { type: string; number: string };
+  registrationDate?: string;
+  status: string;
+  updateDate?: string;
   username?: string;
-  status?: string;
 }
 
 export interface CreateUserRequest {
@@ -376,6 +531,32 @@ export interface LogisticsWarehouse extends SellerWarehouse {}
 export interface ShipmentActionResponse {
   shipmentId: string;
   shipmentStatus: string;
+}
+
+export interface Shipment {
+  shipmentId: string;
+  orderId: string;
+  warehouseId: string;
+  trackingCode: string;
+  carrier: {
+    carrierId: string;
+    name: string;
+    serviceType: string;
+  };
+  shipmentStatus: string;
+  status: string;
+  deliveryAddress: DeliveryAddress;
+  departureDate?: string;
+  deliveryDate?: string;
+}
+
+export interface ShipmentFilters {
+  status?: string;
+  warehouseId?: string;
+}
+
+export interface ReturnFilters {
+  status?: string;
 }
 
 /* ---------------------------------- Errores --------------------------------- */

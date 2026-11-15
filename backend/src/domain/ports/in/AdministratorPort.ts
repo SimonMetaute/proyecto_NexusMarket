@@ -92,6 +92,54 @@ export interface Dispute {
 export interface OperationalDashboard {
   activeOrders: number;
   totalSales: number;
+  totalOrders?: number;
+  totalUsers?: number;
+  totalSellers?: number;
+  totalProducts?: number;
+  publishedProducts?: number;
+  pendingReturns?: number;
+}
+
+export interface AuditLogPageResult {
+  items: AuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface OnboardSellerParams {
+  account: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phone: string;
+    identityDocumentType: string;
+    identityDocumentNumber: string;
+  };
+  seller: {
+    commercialName: string;
+    personType: 'Natural' | 'Legal';
+  };
+  warehouse: {
+    name: string;
+    country: string;
+    department: string;
+    city: string;
+    address: string;
+    postalCode: string;
+    capacity: number;
+  };
+}
+
+export interface OnboardSellerResult {
+  userId: string;
+  sellerId: string;
+  warehouseId: string;
+  email: string;
+  role: string;
+  status: string;
+  sellerVerificationStatus: string;
 }
 
 export interface AnomalyAlert {
@@ -112,6 +160,7 @@ export interface AdministratorPort {
   // User Management
   registerEmployeeUser(user: User, newEmployee: User): Promise<User>;
   consultUsers(user: User, criteria: UserFilterCriteria): Promise<User[]>;
+  onboardSeller(user: User, params: OnboardSellerParams): Promise<OnboardSellerResult>;
   consultUserDetails(user: User, targetUser: User): Promise<User>;
   changeUserStatus(user: User, targetUser: User, newStatus: any): Promise<User>;
   changeUserRole(user: User, targetUser: User, newRole: any): Promise<User>;
@@ -177,7 +226,7 @@ export interface AdministratorPort {
   investigateAnomaly(user: User, anomaly: AnomalyAlert): Promise<AnomalyAlert>;
 
   // Audit & Compliance
-  consultAuditLogs(user: User, criteria: AuditFilterCriteria): Promise<AuditLog[]>;
+  consultAuditLogs(user: User, criteria: AuditFilterCriteria, page?: number, limit?: number): Promise<AuditLogPageResult>;
   consultAllOperations(user: User, criteria: OperationFilterCriteria): Promise<Operation[]>;
   reconcileAuditRecords(user: User, request: AuditReconciliationRequest): Promise<void>;
 }

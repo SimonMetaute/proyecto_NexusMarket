@@ -160,6 +160,24 @@ export function createBuyerRoutes(
       buyerController.consultOrderDetails(req, res),
     ),
   );
+  router.post(
+    '/buyer/orders/:orderId/returns',
+    authMiddleware,
+    requireRole('BUYER'),
+    asyncHandler((req: Request, res: Response) =>
+      buyerController.requestReturn(req, res),
+    ),
+  );
+
+  // Returns
+  router.get(
+    '/buyer/returns',
+    authMiddleware,
+    requireRole('BUYER'),
+    asyncHandler((req: Request, res: Response) =>
+      buyerController.consultMyReturns(req, res),
+    ),
+  );
 
   return router;
 }

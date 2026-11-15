@@ -8,6 +8,7 @@ import { pool } from './infrastructure/database/mysql-pool.js';
 import { MySQLUserRepository } from './infrastructure/repositories/MySQLUserRepository.js';
 import { MySQLProductRepository } from './infrastructure/repositories/MySQLProductRepository.js';
 import { MySQLProductVariantRepository } from './infrastructure/repositories/MySQLProductVariantRepository.js';
+import { MySQLProductImageRepository } from './infrastructure/repositories/MySQLProductImageRepository.js';
 import { MySQLBuyerRepository } from './infrastructure/repositories/MySQLBuyerRepository.js';
 import { MySQLSellerRepository } from './infrastructure/repositories/MySQLSellerRepository.js';
 import { MySQLWarehouseRepository } from './infrastructure/repositories/MySQLWarehouseRepository.js';
@@ -19,6 +20,8 @@ import { MySQLPaymentRepository } from './infrastructure/repositories/MySQLPayme
 import { MySQLShipmentRepository } from './infrastructure/repositories/MySQLShipmentRepository.js';
 import { MySQLReturnRepository } from './infrastructure/repositories/MySQLReturnRepository.js';
 import { MySQLOperationRepository } from './infrastructure/repositories/MySQLOperationRepository.js';
+import { MySQLAnalyticsRepository } from './infrastructure/repositories/MySQLAnalyticsRepository.js';
+import { MySQLTransactionManager } from './infrastructure/repositories/MySQLTransactionManager.js';
 import { MongoAuditLogRepository } from './infrastructure/repositories/MongoAuditLogRepository.js';
 
 // --- Security adapters ----------------------------------------------------
@@ -79,6 +82,7 @@ app.use(express.json({ limit: '1mb' }));
 const userRepository = new MySQLUserRepository();
 const productRepository = new MySQLProductRepository();
 const productVariantRepository = new MySQLProductVariantRepository();
+const productImageRepository = new MySQLProductImageRepository();
 const buyerRepository = new MySQLBuyerRepository();
 const sellerRepository = new MySQLSellerRepository();
 const warehouseRepository = new MySQLWarehouseRepository();
@@ -90,6 +94,8 @@ const paymentRepository = new MySQLPaymentRepository();
 const shipmentRepository = new MySQLShipmentRepository();
 const returnRepository = new MySQLReturnRepository();
 const operationRepository = new MySQLOperationRepository(userRepository);
+const analyticsRepository = new MySQLAnalyticsRepository();
+const transactionManager = new MySQLTransactionManager();
 const auditLogRepository = new MongoAuditLogRepository();
 
 // --- Security adapters -----------------------------------------------------
@@ -130,6 +136,9 @@ const buyerService = new BuyerService(
   productVariantRepository,
   warehouseRepository,
   auditLogRepository,
+  invoiceRepository,
+  shipmentRepository,
+  returnRepository,
 );
 const sellerService = new SellerService(
   sellerRepository,
@@ -139,6 +148,8 @@ const sellerService = new SellerService(
   productVariantRepository,
   warehouseRepository,
   auditLogRepository,
+  productImageRepository,
+  analyticsRepository,
 );
 
 // --- HTTP controllers ------------------------------------------------------
@@ -169,6 +180,10 @@ const administratorService = new AdministratorService(
   paymentRepository,
   operationRepository,
   auditLogRepository,
+  warehouseRepository,
+  analyticsRepository,
+  transactionManager,
+  passwordService,
 );
 const supervisorService = new SupervisorService(
   orderRepository,

@@ -19,17 +19,17 @@ import { ProductCategory, ProductStatus } from '../model/enums.js';
  */
 export class Product {
   private readonly _productId: string;
-  private readonly _name: string;
-  private readonly _description: string;
-  private readonly _category?: ProductCategory;
-  private readonly _sku?: string;
+  private _name: string;
+  private _description: string;
+  private _category?: ProductCategory;
+  private _sku?: string;
   private readonly _sellerId: string;
-  private readonly _basePrice?: number;
-  private readonly _price: number;
+  private _basePrice?: number;
+  private _price: number;
   private _productStatus?: ProductStatus;
-  private readonly _publicationDate?: Date;
-  private readonly _brand?: string;
-  private readonly _stock: number;
+  private _publicationDate?: Date;
+  private _brand?: string;
+  private _stock: number;
   private readonly _createdAt: Date;
 
   constructor(params: {
@@ -155,6 +155,9 @@ export class Product {
 
   publish(): void {
     this._productStatus = ProductStatus.PUBLISHED;
+    if (this._publicationDate === undefined) {
+      this._publicationDate = new Date();
+    }
   }
 
   suspend(): void {
@@ -167,5 +170,63 @@ export class Product {
 
   isPublished(): boolean {
     return this._productStatus === ProductStatus.PUBLISHED;
+  }
+
+  /**
+   * Applies a partial catalog update while preserving the aggregate identity,
+   * ownership and status. Only provided fields change; the caller is
+   * responsible for validating ownership and uniqueness at the application
+   * layer.
+   */
+  updateDetails(changes: {
+    name?: string;
+    description?: string;
+    category?: ProductCategory;
+    sku?: string;
+    basePrice?: number;
+    price?: number;
+    brand?: string;
+    stock?: number;
+  }): void {
+    if (changes.name !== undefined) {
+      if (changes.name.trim().length === 0) {
+        throw new Error('Product.name is required.');
+      }
+      this._name = changes.name.trim();
+    }
+    if (changes.description !== undefined) {
+      if (changes.description.trim().length === 0) {
+        throw new Error('Product.description is required.');
+      }
+      this._description = changes.description.trim();
+    }
+    if (changes.category !== undefined) {
+      this._category = changes.category;
+    }
+    if (changes.sku !== undefined) {
+      this._sku = changes.sku.trim();
+    }
+    if (changes.basePrice !== undefined) {
+      this._basePrice = changes.basePrice;
+    }
+    if (changes.price !== undefined) {
+      if (changes.price < 0) {
+        throw new Error('Product.price cannot be negative.');
+      }
+      this._price = changes.price;
+    }
+    if (changes.brand !== undefined) {
+      this._brand = changes.brand.trim();
+    }
+    if (changes.stock !== undefined) {
+      if (changes.stock < 0) {
+        throw new Error('Product.stock cannot be negative.');
+      }
+      this._stock = changes.stock;
+    }
+  }
+
+  hasPublishableData(): boolean {
+    return this._sku !== undefined && this._sku.trim().length > 0;
   }
 }

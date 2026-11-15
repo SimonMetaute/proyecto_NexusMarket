@@ -52,12 +52,52 @@ export function createSellerRoutes(
   );
 
   // Products
+  router.get(
+    '/seller/products',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMyProducts(req, res),
+    ),
+  );
   router.post(
     '/seller/products',
     authMiddleware,
     requireRole('SELLER'),
     asyncHandler((req: Request, res: Response) =>
       sellerController.createProduct(req, res),
+    ),
+  );
+  router.put(
+    '/seller/products/:productId',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.updateMyProduct(req, res),
+    ),
+  );
+  router.get(
+    '/seller/products/:productId/images',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultProductImages(req, res),
+    ),
+  );
+  router.post(
+    '/seller/products/:productId/images',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.addProductImage(req, res),
+    ),
+  );
+  router.delete(
+    '/seller/products/:productId/images/:imageId',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.removeProductImage(req, res),
     ),
   );
   router.post(
@@ -118,6 +158,16 @@ export function createSellerRoutes(
     requireRole('SELLER'),
     asyncHandler((req: Request, res: Response) =>
       sellerController.prepareOrder(req, res),
+    ),
+  );
+
+  // Dashboard
+  router.get(
+    '/seller/dashboard',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMyDashboard(req, res),
     ),
   );
 

@@ -1,7 +1,7 @@
-import type { RowDataPacket } from 'mysql2/promise';
+﻿import type { RowDataPacket } from 'mysql2/promise';
 import type { SellerRepositoryPort } from '../../domain/ports/out/SellerRepositoryPort.js';
 import { Seller } from '../../domain/entities/Seller.js';
-import { pool } from '../database/mysql-pool.js';
+import { getExecutor } from '../database/mysql-transaction.js';
 import { PersonType, SellerVerificationStatus } from '../../domain/model/enums.js';
 
 interface SellerRow extends RowDataPacket {
@@ -33,7 +33,7 @@ function toDomain(row: SellerRow): Seller {
 
 export class MySQLSellerRepository implements SellerRepositoryPort {
   async save(seller: Seller): Promise<Seller> {
-    await pool.execute(
+    await getExecutor().execute(
       `INSERT INTO sellers (sellerId, userId, commercialName, personType, verificationStatus, storeId, commercialAccountId, reputation, approvalDate)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE commercialName = VALUES(commercialName), personType = VALUES(personType), verificationStatus = VALUES(verificationStatus), storeId = VALUES(storeId), commercialAccountId = VALUES(commercialAccountId), reputation = VALUES(reputation), approvalDate = VALUES(approvalDate)`,
@@ -43,28 +43,29 @@ export class MySQLSellerRepository implements SellerRepositoryPort {
   }
 
   async findByIdentifier(seller: Seller): Promise<Seller | null> {
-    const [rows] = await pool.query<SellerRow[]>('SELECT * FROM sellers WHERE sellerId = ? LIMIT 1', [seller.sellerId]);
+    const [rows] = await getExecutor().query<SellerRow[]>('SELECT * FROM sellers WHERE sellerId = ? LIMIT 1', [seller.sellerId]);
     const row = rows[0];
     if (!row) return null;
     return toDomain(row);
   }
 
   async findByUser(user: any): Promise<Seller | null> {
-    const [rows] = await pool.query<SellerRow[]>('SELECT * FROM sellers WHERE userId = ? LIMIT 1', [user.userId]);
+    const [rows] = await getExecutor().query<SellerRow[]>('SELECT * FROM sellers WHERE userId = ? LIMIT 1', [user.userId]);
     const row = rows[0];
     if (!row) return null;
     return toDomain(row);
   }
 
   async findByCommercialName(commercialName: string): Promise<Seller | null> {
-    const [rows] = await pool.query<SellerRow[]>('SELECT * FROM sellers WHERE commercialName = ? LIMIT 1', [commercialName]);
+    const [rows] = await getExecutor().query<SellerRow[]>('SELECT * FROM sellers WHERE commercialName = ? LIMIT 1', [commercialName]);
     const row = rows[0];
     if (!row) return null;
     return toDomain(row);
   }
 
   async findByVerificationStatus(status: SellerVerificationStatus): Promise<Seller[]> {
-    const [rows] = await pool.query<SellerRow[]>('SELECT * FROM sellers WHERE verificationStatus = ?', [status]);
+    const [rows] = await getExecutor().query<SellerRow[]>('SELECT * FROM sellers WHERE verificationStatus = ?', [status]);
     return rows.map(toDomain);
   }
 }
+

@@ -19,12 +19,13 @@ import {
   TableRow,
   formatDate,
   formatMoney,
+  getSellerDashboard,
   getSellerProfile,
   listSellerInventory,
   listSellerOrders,
   statusVariant,
 } from '@nexus/shared';
-import { Package, ShoppingBag, Warehouse } from 'lucide-react';
+import { Package, RotateCcw, ShoppingBag, TrendingUp, Warehouse } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -41,10 +42,21 @@ export function DashboardPage() {
     queryKey: ['seller', 'inventory'],
     queryFn: listSellerInventory,
   });
+  const dashboardQuery = useQuery({
+    queryKey: ['seller', 'dashboard'],
+    queryFn: getSellerDashboard,
+  });
 
   const isLoading =
-    profileQuery.isLoading || ordersQuery.isLoading || inventoryQuery.isLoading;
-  const firstError = profileQuery.error ?? ordersQuery.error ?? inventoryQuery.error;
+    profileQuery.isLoading ||
+    ordersQuery.isLoading ||
+    inventoryQuery.isLoading ||
+    dashboardQuery.isLoading;
+  const firstError =
+    profileQuery.error ??
+    ordersQuery.error ??
+    inventoryQuery.error ??
+    dashboardQuery.error;
 
   if (isLoading) {
     return (
@@ -73,6 +85,7 @@ export function DashboardPage() {
             void profileQuery.refetch();
             void ordersQuery.refetch();
             void inventoryQuery.refetch();
+            void dashboardQuery.refetch();
           }}
         />
       </div>
@@ -80,6 +93,7 @@ export function DashboardPage() {
   }
 
   const profile = profileQuery.data;
+  const dashboard = dashboardQuery.data;
   const orders = ordersQuery.data ?? [];
   const inventory = inventoryQuery.data ?? [];
 
@@ -100,23 +114,43 @@ export function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           icon={<ShoppingBag className="h-4 w-4" />}
-          label="Órdenes recibidas"
-          value={String(orders.length)}
+          label="Órdenes totales"
+          value={String(dashboard?.totalOrders ?? 0)}
+        />
+        <MetricCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Ventas totales"
+          value={formatMoney(dashboard?.totalSales ?? 0)}
+        />
+        <MetricCard
+          icon={<Package className="h-4 w-4" />}
+          label="Productos publicados"
+          value={`${dashboard?.publishedProducts ?? 0} / ${dashboard?.totalProducts ?? 0}`}
         />
         <MetricCard
           icon={<Warehouse className="h-4 w-4" />}
+          label="Stock total"
+          value={String(dashboard?.totalStock ?? 0)}
+        />
+        <MetricCard
+          icon={<ShoppingBag className="h-4 w-4" />}
+          label="Órdenes activas"
+          value={String(dashboard?.activeOrders ?? 0)}
+        />
+        <MetricCard
+          icon={<RotateCcw className="h-4 w-4" />}
+          label="Devoluciones pendientes"
+          value={String(dashboard?.pendingReturns ?? 0)}
+        />
+        <MetricCard
+          icon={<Package className="h-4 w-4" />}
           label="Registros de inventario"
           value={String(inventory.length)}
         />
         <MetricCard
           icon={<Package className="h-4 w-4" />}
-          label="Reputación"
-          value={profile !== undefined ? `${profile.reputation} / 5` : '—'}
-        />
-        <MetricCard
-          icon={<Package className="h-4 w-4" />}
           label="Verificación"
-          value={profile?.verificationStatus ?? '—'}
+          value={dashboard?.verificationStatus ?? profile?.verificationStatus ?? '—'}
         />
       </div>
 
@@ -192,9 +226,10 @@ export function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Alert variant="info" title="Alcance real del backend">
-            No existen endpoints de dashboard, tienda ni liquidaciones para el vendedor.
-            Este resumen usa perfil, órdenes e inventario reales.
+          <Alert variant="info" title="Métricas del backend">
+            Los KPIs provienen de <code>GET /seller/dashboard</code> (agregaciones
+            reales de órdenes, productos, stock y devoluciones). La tienda y las
+            liquidaciones no existen en el contrato actual.
           </Alert>
         </div>
       </div>
