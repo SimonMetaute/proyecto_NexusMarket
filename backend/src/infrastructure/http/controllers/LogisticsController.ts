@@ -13,6 +13,7 @@ import {
   requirePositiveInt,
 } from '../validation/validator.js';
 import { Inventory } from '../../../domain/entities/Inventory.js';
+import { toWarehouseResponse } from '../mappers/WarehouseMapper.js';
 
 function asString(value: string | string[] | undefined): string | undefined {
   if (value === undefined) {
@@ -39,7 +40,7 @@ export class LogisticsController {
   async consultOperationalWarehouses(req: Request, res: Response): Promise<void> {
     const user = this.requireUser(req);
     const warehouses = await this.logisticsService.consultOperationalWarehouses(user);
-    res.status(200).json(warehouses);
+    res.status(200).json(warehouses.map(toWarehouseResponse));
   }
 
   async registerStockEntry(req: Request, res: Response): Promise<void> {

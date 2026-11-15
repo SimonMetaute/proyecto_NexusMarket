@@ -43,7 +43,10 @@ export const appConfig = {
     bcryptSaltRounds: envNumber('BCRYPT_SALT_ROUNDS', 10),
   },
   cors: {
-    allowedOrigins: envString('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
+    allowedOrigins: envString(
+      'CORS_ALLOWED_ORIGINS',
+      'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176',
+    )
       .split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0),

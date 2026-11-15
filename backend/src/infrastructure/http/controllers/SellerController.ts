@@ -24,6 +24,7 @@ import { Product } from '../../../domain/entities/Product.js';
 import { ProductVariant } from '../../../domain/entities/ProductVariant.js';
 import { Inventory } from '../../../domain/entities/Inventory.js';
 import { WarehouseLocation } from '../../../domain/model/value-objects.js';
+import { toWarehouseResponse } from '../mappers/WarehouseMapper.js';
 
 function asString(value: string | string[] | undefined): string | undefined {
   if (value === undefined) {
@@ -93,17 +94,7 @@ export class SellerController {
   async consultMyWarehouses(req: Request, res: Response): Promise<void> {
     const user = this.requireUser(req);
     const warehouses = await this.sellerService.consultMyWarehouses(user);
-    res.status(200).json(
-      warehouses.map((w) => ({
-        warehouseId: w.warehouseId,
-        sellerId: w.sellerId,
-        name: w.name,
-        location: w.location,
-        capacity: w.capacity,
-        status: w.status,
-        creationDate: w.creationDate,
-      })),
-    );
+    res.status(200).json(warehouses.map(toWarehouseResponse));
   }
 
   async registerWarehouse(req: Request, res: Response): Promise<void> {
@@ -246,7 +237,17 @@ export class SellerController {
   async consultMyInventory(req: Request, res: Response): Promise<void> {
     const user = this.requireUser(req);
     const inventory = await this.sellerService.consultMyInventory(user);
-    res.status(200).json(inventory);
+    res.status(200).json(
+      inventory.map((i) => ({
+        inventoryId: i.inventoryId,
+        productId: i.productId,
+        warehouseId: i.warehouseId,
+        availableStock: i.availableStock,
+        reservedStock: i.reservedStock,
+        totalStock: i.totalStock,
+        updateDate: i.updateDate,
+      })),
+    );
   }
 
   async registerStockEntry(req: Request, res: Response): Promise<void> {
