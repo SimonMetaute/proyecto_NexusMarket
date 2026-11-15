@@ -45,9 +45,19 @@ export interface Settlement {
 }
 
 export interface SettlementPreview {
+  /** Human readable period (`2026-11-01 to 2026-11-30`). */
+  period: string;
+  currency: string;
+  commissionRate: number;
+  /** Gross sales of orders placed in the period (excluding cancelled/refunded). */
   total: number;
   commissions: number;
+  taxes: number;
+  deductions: number;
   netAmount: number;
+  orders: number;
+  deliveredOrders: number;
+  pendingReturns: number;
 }
 
 export interface Commission {

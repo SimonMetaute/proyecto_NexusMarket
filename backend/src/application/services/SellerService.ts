@@ -23,10 +23,12 @@ import type {
 } from '../../domain/ports/in/SellerPort.js';
 import type { User } from '../../domain/model/user.js';
 import type { Seller } from '../../domain/entities/Seller.js';
-import type { Store } from '../../domain/entities/Store.js';
+import type { Buyer } from '../../domain/entities/Buyer.js';
+import { Store } from '../../domain/entities/Store.js';
 import { Warehouse } from '../../domain/entities/Warehouse.js';
 import { WarehouseLocation } from '../../domain/model/value-objects.js';
 import type { Product } from '../../domain/entities/Product.js';
+import type { ProductCategory } from '../../domain/model/enums.js';
 import { ProductImage } from '../../domain/entities/ProductImage.js';
 import type { ProductImageRepositoryPort } from '../../domain/ports/out/ProductImageRepositoryPort.js';
 import type { AnalyticsRepositoryPort } from '../../domain/ports/out/AnalyticsRepositoryPort.js';
@@ -34,16 +36,27 @@ import type { ProductVariant } from '../../domain/entities/ProductVariant.js';
 import { Inventory } from '../../domain/entities/Inventory.js';
 import type { Order } from '../../domain/entities/Order.js';
 import type { Shipment } from '../../domain/entities/Shipment.js';
+import { Carrier as ShipmentCarrier, Shipment as ShipmentEntity } from '../../domain/entities/Shipment.js';
 import type { Return } from '../../domain/entities/Return.js';
 import { AuditLog } from '../../domain/model/AuditLog.js';
+import { DeliveryAddress } from '../../domain/model/value-objects.js';
 import type { SellerRepositoryPort } from '../../domain/ports/out/SellerRepositoryPort.js';
 import type { ProductRepository } from '../../domain/ports/out/ProductRepository.js';
 import type { OrderRepositoryPort } from '../../domain/ports/out/OrderRepositoryPort.js';
 import type { InventoryRepositoryPort } from '../../domain/ports/out/InventoryRepositoryPort.js';
 import type { ProductVariantRepositoryPort } from '../../domain/ports/out/ProductVariantRepositoryPort.js';
 import type { WarehouseRepositoryPort } from '../../domain/ports/out/WarehouseRepositoryPort.js';
+import type { ShipmentRepositoryPort } from '../../domain/ports/out/ShipmentRepositoryPort.js';
+import type { BuyerRepositoryPort } from '../../domain/ports/out/BuyerRepositoryPort.js';
+import type { TransactionManagerPort } from '../../domain/ports/out/TransactionManagerPort.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
-import { SellerVerificationStatus, WarehouseStatus } from '../../domain/model/enums.js';
+import {
+  SellerVerificationStatus,
+  ShipmentStatus,
+  StoreCategory,
+  StoreStatus as StoreLifecycleStatus,
+  WarehouseStatus,
+} from '../../domain/model/enums.js';
 import { ApiError } from '../../domain/errors/ApiError.js';
 
 export class SellerService implements SellerPort {
@@ -57,6 +70,9 @@ export class SellerService implements SellerPort {
     private readonly auditLogRepository: AuditLogRepository,
     private readonly productImageRepository: ProductImageRepositoryPort,
     private readonly analyticsRepository: AnalyticsRepositoryPort,
+    private readonly shipmentRepository: ShipmentRepositoryPort,
+    private readonly buyerRepository: BuyerRepositoryPort,
+    private readonly transactionManager: TransactionManagerPort,
   ) {}
 
   // --- Profile & Store Management ---
@@ -79,8 +95,26 @@ export class SellerService implements SellerPort {
     return this.sellerRepository.save(seller);
   }
 
+  /**
+   * The storefront is derived from the seller's approved profile: there is no
+   * separate `stores` table, so the identity is deterministic (`storeId` =
+   * `sellerId`) and the category is inferred from the published catalogue.
+   */
   async consultMyStore(user: User): Promise<Store> {
-    throw ApiError.notFound('Store lookup not implemented yet.');
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    const products = await this.productRepository.findBySellerId(seller.sellerId);
+    return new Store({
+      storeId: seller.sellerId,
+      sellerId: seller.sellerId,
+      name: seller.commercialName,
+      description: `Tienda oficial de ${seller.commercialName}`,
+      storeCategory: dominantStoreCategory(products),
+      status: storeStatusFor(seller.verificationStatus),
+      creationDate: seller.approvalDate ?? new Date(),
+    });
   }
 
   async updateMyStore(user: User, store: Store): Promise<Store> {
@@ -496,8 +530,131 @@ export class SellerService implements SellerPort {
       throw ApiError.forbidden('Cannot prepare another seller order');
     }
     found.prepare();
-    await this.orderRepository.save(found);
+
+    // A prepared order must be visible to logistics immediately. The shipment
+    // is created exactly once per order and inside the same MySQL transaction
+    // as the status change, so a failure never leaves an orphan order/shipment.
+    const existing = await this.shipmentRepository.findByOrder(found);
+    let createdShipment: ShipmentEntity | undefined;
+    if (existing.length === 0) {
+      createdShipment = new ShipmentEntity({
+        shipmentId: globalThis.crypto.randomUUID(),
+        orderId: found.orderId,
+        warehouseId: await this.resolveWarehouseId(found, seller),
+        deliveryAddress: await this.resolveDeliveryAddress(found),
+        carrier: new ShipmentCarrier({
+          carrierId: 'NEXUS-DEFAULT',
+          name: 'NexusMarket Logistics',
+          serviceType: 'Standard',
+        }),
+        trackingCode: `NX-${found.orderId.slice(0, 8).toUpperCase()}-${globalThis.crypto
+          .randomUUID()
+          .slice(0, 8)
+          .toUpperCase()}`,
+        shipmentStatus: ShipmentStatus.IN_PREPARATION,
+      });
+    }
+
+    await this.transactionManager.runInTransaction(async () => {
+      await this.orderRepository.save(found);
+      if (createdShipment === undefined) {
+        return;
+      }
+      try {
+        await this.shipmentRepository.save(createdShipment);
+      } catch (error) {
+        // Concurrent prepare calls race on the unique orderId index: the winner
+        // already created the shipment, so the loser is a no-op.
+        if (!isDuplicateKeyError(error)) {
+          throw error;
+        }
+      }
+    });
+
+    if (createdShipment !== undefined) {
+      try {
+        await this.auditLogRepository.save(
+          new AuditLog({
+            id: globalThis.crypto.randomUUID(),
+            actorId: user.userId,
+            action: 'SHIPMENT_CREATED',
+            timestamp: new Date(),
+            details: {
+              shipmentId: createdShipment.shipmentId,
+              orderId: createdShipment.orderId,
+              warehouseId: createdShipment.warehouseId,
+              trackingCode: createdShipment.trackingCode,
+              shipmentStatus: createdShipment.shipmentStatus,
+            },
+          }),
+        );
+      } catch (auditError) {
+        // Audit is best-effort: a Mongo outage must not roll back the dispatch
+        // queue entry.
+        console.error('[prepareOrder] could not write SHIPMENT_CREATED audit log', auditError);
+      }
+    }
+
     return found;
+  }
+
+  /**
+   * Picks the warehouse that actually holds the reserved units of the order.
+   * Falls back to the seller's first operational warehouse.
+   */
+  private async resolveWarehouseId(order: Order, seller: Seller): Promise<string> {
+    for (const line of order.orderLines) {
+      const inventory = await this.inventoryRepository.findByProduct({
+        productId: line.productId,
+      } as Product);
+      const match =
+        inventory.find((candidate) => candidate.reservedStock >= line.quantity) ??
+        inventory.find((candidate) => candidate.reservedStock > 0) ??
+        inventory[0];
+      if (match !== undefined) {
+        return match.warehouseId;
+      }
+    }
+
+    const warehouses = await this.warehouseRepository.findBySeller(seller);
+    const chosen =
+      warehouses.find((candidate) => candidate.status === WarehouseStatus.OPERATIONAL) ??
+      warehouses[0];
+    if (chosen === undefined) {
+      throw ApiError.invalidDomainValue(
+        `No warehouse available to prepare order ${order.orderId}.`,
+        { field: 'warehouseId' },
+      );
+    }
+    return chosen.warehouseId;
+  }
+
+  /**
+   * Uses the buyer's registered address (persisted during checkout). Legacy
+   * orders created before that persistence get a neutral placeholder so the
+   * logistics queue can still operate.
+   */
+  private async resolveDeliveryAddress(order: Order): Promise<DeliveryAddress> {
+    const buyer = await this.buyerRepository.findByIdentifier({
+      buyerId: order.buyerId,
+    } as Buyer);
+    const addresses = buyer?.deliveryAddresses ?? [];
+    const chosen =
+      addresses.find((candidate) => candidate.isPrimary) ?? addresses[0];
+    if (chosen !== undefined) {
+      return chosen;
+    }
+    return new DeliveryAddress({
+      addressId: globalThis.crypto.randomUUID(),
+      country: 'Colombia',
+      department: 'No registrado',
+      city: 'No registrado',
+      neighborhood: 'No registrado',
+      address: 'Dirección no registrada en checkout',
+      postalCode: '000000',
+      reference: '',
+      isPrimary: false,
+    });
   }
 
   // --- Shipment & Dispatch ---
@@ -527,8 +684,38 @@ export class SellerService implements SellerPort {
     return [];
   }
 
+  /**
+   * Lightweight settlement report: gross sales, marketplace commission, IVA on
+   * that commission and approved refunds. Reads the transactional tables, so it
+   * stays consistent with the seller dashboard.
+   */
   async previewSettlement(user: User, period: DateRange): Promise<SettlementPreview> {
-    return { total: 0, commissions: 0, netAmount: 0 };
+    const seller = await this.sellerRepository.findByUser(user);
+    if (!seller) {
+      throw ApiError.notFound(`Seller profile not found for user ${user.userId}`);
+    }
+    const stats = await this.analyticsRepository.getSellerSettlement(seller.sellerId, {
+      startDate: period.startDate,
+      endDate: period.endDate,
+    });
+
+    const commissions = roundCurrency(stats.grossSales * COMMISSION_RATE);
+    const taxes = roundCurrency(commissions * COMMISSION_TAX_RATE);
+    const deductions = roundCurrency(stats.refundedAmount);
+    const total = roundCurrency(stats.grossSales);
+    return {
+      period: `${toIsoDay(period.startDate)} to ${toIsoDay(period.endDate)}`,
+      currency: SETTLEMENT_CURRENCY,
+      commissionRate: COMMISSION_RATE,
+      total,
+      commissions,
+      taxes,
+      deductions,
+      netAmount: roundCurrency(total - commissions - taxes - deductions),
+      orders: stats.orderCount,
+      deliveredOrders: stats.deliveredOrders,
+      pendingReturns: stats.pendingReturns,
+    };
   }
 
   async processSettlement(user: User, settlement: Settlement): Promise<Settlement> {
@@ -579,5 +766,67 @@ export class SellerService implements SellerPort {
 
   async consultMyOperationHistory(user: User, period: DateRange): Promise<AuditLog[]> {
     return [];
+  }
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const candidate = error as { code?: unknown; errno?: unknown };
+  return candidate.code === 'ER_DUP_ENTRY' || candidate.errno === 1062;
+}
+
+// --- Settlement policy (documented marketplace defaults) -------------------
+const COMMISSION_RATE = 0.1; // 10% marketplace commission
+const COMMISSION_TAX_RATE = 0.19; // IVA applied to the commission
+const SETTLEMENT_CURRENCY = 'COP';
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function toIsoDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** Storefront category inferred from the seller's catalogue. */
+function toStoreCategory(category: ProductCategory): StoreCategory | undefined {
+  const raw = category as string;
+  return Object.values(StoreCategory).find((candidate) => candidate === raw);
+}
+
+function dominantStoreCategory(products: Product[]): StoreCategory {
+  const counts = new Map<StoreCategory, number>();
+  for (const product of products) {
+    const category =
+      product.category === undefined ? undefined : toStoreCategory(product.category);
+    if (category === undefined) {
+      continue;
+    }
+    counts.set(category, (counts.get(category) ?? 0) + 1);
+  }
+  let dominant = StoreCategory.OTHER;
+  let dominantCount = 0;
+  for (const [category, count] of counts) {
+    if (count > dominantCount) {
+      dominant = category;
+      dominantCount = count;
+    }
+  }
+  return dominant;
+}
+
+/** Only a verified seller has an active storefront in the marketplace. */
+function storeStatusFor(
+  verificationStatus: SellerVerificationStatus,
+): StoreLifecycleStatus {
+  switch (verificationStatus) {
+    case SellerVerificationStatus.VERIFIED:
+      return StoreLifecycleStatus.ACTIVE;
+    case SellerVerificationStatus.REJECTED:
+      return StoreLifecycleStatus.SUSPENDED;
+    default:
+      return StoreLifecycleStatus.INACTIVE;
   }
 }

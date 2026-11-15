@@ -36,6 +36,51 @@ function asString(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/** Query parameters are typed as `unknown` by Express. */
+function queryString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+}
+
+/** `YYYY-MM-DD` query parameter -> local Date (start or end of that day). */
+function parseDay(
+  value: string | undefined,
+  field: string,
+  endOfDay: boolean,
+): Date | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw ApiError.invalidRequest(`${field} must use the YYYY-MM-DD format.`, {
+      field,
+    });
+  }
+  const parsed = new Date(`${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`);
+  if (Number.isNaN(parsed.getTime())) {
+    throw ApiError.invalidRequest(`${field} is not a valid date.`, { field });
+  }
+  return parsed;
+}
+
+/** Settlement window: explicit query params, otherwise the current month. */
+function resolveSettlementPeriod(
+  startDate: string | undefined,
+  endDate: string | undefined,
+  now: Date,
+): { startDate: Date; endDate: Date } {
+  const start =
+    parseDay(startDate, 'startDate', false) ??
+    new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = parseDay(endDate, 'endDate', true) ?? now;
+  if (start.getTime() > end.getTime()) {
+    throw ApiError.invalidRequest(
+      'startDate must be before or equal to endDate.',
+      { field: 'startDate' },
+    );
+  }
+  return { startDate: start, endDate: end };
+}
+
 export class SellerController {
   private readonly sellerService: SellerPort;
 
@@ -416,5 +461,63 @@ export class SellerController {
     const user = this.requireUser(req);
     const dashboard = await this.sellerService.consultMyDashboard(user);
     res.status(200).json(dashboard);
+  }
+
+  /** Storefront view derived from the seller profile (SDD §5.3). */
+  async consultMyStore(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const [store, seller] = await Promise.all([
+      this.sellerService.consultMyStore(user),
+      this.sellerService.consultMyProfile(user),
+    ]);
+    res.status(200).json({
+      storeId: store.storeId,
+      sellerId: store.sellerId,
+      storeName: store.name,
+      storeDescription: store.description,
+      storeCategory: store.storeCategory,
+      status: store.status,
+      rating: seller.reputation,
+      // Reviews are not part of the v1 model yet.
+      reviewCount: 0,
+      bannerUrl: null,
+      logoUrl: null,
+      creationDate: store.creationDate,
+    });
+  }
+
+  /**
+   * Settlement report for a period (`startDate`/`endDate`, `YYYY-MM-DD`).
+   * Defaults to the current month. Figures come from orders and returns.
+   */
+  async consultMySettlements(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const now = new Date();
+    const period = resolveSettlementPeriod(
+      queryString(req.query.startDate),
+      queryString(req.query.endDate),
+      now,
+    );
+
+    const [seller, preview] = await Promise.all([
+      this.sellerService.consultMyProfile(user),
+      this.sellerService.previewSettlement(user, period),
+    ]);
+
+    res.status(200).json({
+      sellerId: seller.sellerId,
+      period: preview.period,
+      currency: preview.currency,
+      commissionRate: preview.commissionRate,
+      totalSales: preview.total,
+      commissionAmount: preview.commissions,
+      taxes: preview.taxes,
+      deductions: preview.deductions,
+      netAmount: preview.netAmount,
+      orders: preview.orders,
+      deliveredOrders: preview.deliveredOrders,
+      pendingReturns: preview.pendingReturns,
+      generatedAt: now,
+    });
   }
 }

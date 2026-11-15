@@ -373,16 +373,28 @@ async function main(): Promise<void> {
       `status=${stockInGhostWarehouse.status} code=${stockInGhostWarehouse.body?.code}`,
     );
 
-    // Gaps that remain outside this phase: recorded so the report can flag them
-    // without failing the run.
-    const notImplemented = [
-      ['GET', '/api/v1/seller/store'],
-      ['GET', '/api/v1/seller/settlements'],
-    ] as const;
-    for (const [method, path] of notImplemented) {
-      const response = await api(method, path, { token: sellerToken });
-      record(`SDD endpoint ${method} ${path}`, 'NOTE', `status=${response.status} code=${response.body?.code}`);
-    }
+    // SDD §5.3 / §5.15: storefront and settlement report are now implemented.
+    const store = await api('GET', '/api/v1/seller/store', { token: sellerToken });
+    check(
+      'SDD endpoint GET /api/v1/seller/store returns the storefront',
+      store.status === 200 &&
+        typeof store.body?.storeId === 'string' &&
+        typeof store.body?.storeName === 'string' &&
+        typeof store.body?.status === 'string',
+      `status=${store.status} storeId=${store.body?.storeId} storeName=${store.body?.storeName}`,
+    );
+
+    const settlements = await api('GET', '/api/v1/seller/settlements', {
+      token: sellerToken,
+    });
+    check(
+      'SDD endpoint GET /api/v1/seller/settlements returns the settlement report',
+      settlements.status === 200 &&
+        typeof settlements.body?.period === 'string' &&
+        typeof settlements.body?.netAmount === 'number' &&
+        settlements.body?.currency === 'COP',
+      `status=${settlements.status} period=${settlements.body?.period} netAmount=${settlements.body?.netAmount}`,
+    );
 
     // New endpoints exist: unauthorized roles hit the role guard (403), not 404.
     const shipmentsForSeller = await api('GET', '/api/v1/logistics/shipments', { token: sellerToken });

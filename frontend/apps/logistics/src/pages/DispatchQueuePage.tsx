@@ -169,7 +169,9 @@ export function DispatchQueuePage() {
               <TableHead>Orden</TableHead>
               <TableHead>Transportadora</TableHead>
               <TableHead>Bodega</TableHead>
+              <TableHead>Destino</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Salida</TableHead>
               <TableHead>Entrega</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -190,10 +192,24 @@ export function DispatchQueuePage() {
                 <TableCell className="font-mono text-xs">
                   {shipment.warehouseId}
                 </TableCell>
+                <TableCell className="max-w-[16rem] text-sm">
+                  <p className="font-medium">
+                    {shipment.deliveryAddress.city}
+                    {shipment.deliveryAddress.department !== ''
+                      ? ` · ${shipment.deliveryAddress.department}`
+                      : ''}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {shipment.deliveryAddress.address}
+                  </p>
+                </TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(shipment.shipmentStatus)}>
                     {shipment.shipmentStatus}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatDate(shipment.departureDate)}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatDate(shipment.deliveryDate)}

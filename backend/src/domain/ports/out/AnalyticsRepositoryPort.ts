@@ -27,7 +27,29 @@ export interface SellerDashboardStats {
   pendingReturns: number;
 }
 
+export interface SettlementPeriod {
+  startDate: Date;
+  endDate: Date;
+}
+
+/** Aggregates feeding the seller settlement report. */
+export interface SellerSettlementStats {
+  orderCount: number;
+  deliveredOrders: number;
+  /** Orders in the period, excluding cancelled/refunded ones. */
+  grossSales: number;
+  /** Orders actually delivered in the period. */
+  deliveredSales: number;
+  /** Refunds approved or completed in the period. */
+  refundedAmount: number;
+  pendingReturns: number;
+}
+
 export interface AnalyticsRepositoryPort {
   getAdminDashboard(): Promise<AdminDashboardStats>;
   getSellerDashboard(sellerId: string): Promise<SellerDashboardStats>;
+  getSellerSettlement(
+    sellerId: string,
+    period: SettlementPeriod,
+  ): Promise<SellerSettlementStats>;
 }

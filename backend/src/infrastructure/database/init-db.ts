@@ -319,6 +319,10 @@ async function migrateLegacySchema(): Promise<void> {
   // Physical reception timestamp for returns (logistics inbox).
   await addColumnIfMissing('product_returns', 'receivedDate', 'DATETIME NULL');
 
+  // One shipment per order: makes the automatic creation idempotent even under
+  // concurrent `prepare` calls.
+  await addUniqueIndexIfMissing('shipments', 'uq_shipments_order', 'orderId');
+
   // Early builds named this column `attributeValue`; the canonical name is `value`.
   const hasAttributeValue = await columnExists('product_variants', 'attributeValue');
   const hasValue = await columnExists('product_variants', 'value');
@@ -358,4 +362,37 @@ async function addColumnIfMissing(
   if (!(await columnExists(table, column))) {
     await pool.execute(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
   }
+}
+
+async function indexExists(table: string, indexName: string): Promise<boolean> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?
+     LIMIT 1`,
+    [table, indexName],
+  );
+  return rows.length > 0;
+}
+
+async function addUniqueIndexIfMissing(
+  table: string,
+  indexName: string,
+  column: string,
+): Promise<void> {
+  if (await indexExists(table, indexName)) {
+    return;
+  }
+  // Older rows may predate idempotent creation; keep one shipment per order
+  // before enforcing the constraint.
+  await pool.execute(`
+    DELETE FROM \`${table}\`
+    WHERE shipmentId NOT IN (
+      SELECT kept FROM (
+        SELECT MIN(shipmentId) AS kept FROM \`${table}\` GROUP BY ${column}
+      ) AS dedupe
+    )
+  `);
+  await pool.execute(
+    `ALTER TABLE \`${table}\` ADD UNIQUE INDEX \`${indexName}\` (${column})`,
+  );
 }

@@ -4,6 +4,7 @@ import { Carrier, Shipment } from '../../domain/entities/Shipment.js';
 import type { Order } from '../../domain/entities/Order.js';
 import { ShipmentStatus } from '../../domain/model/enums.js';
 import { pool } from '../database/mysql-pool.js';
+import { getExecutor } from '../database/mysql-transaction.js';
 import { toDate, toNullableDate } from './mappers/rowMappers.js';
 import { deliveryAddressFromJson, deliveryAddressToJson } from './mappers/valueObjectMappers.js';
 
@@ -58,9 +59,20 @@ function toDomain(row: ShipmentRow): Shipment {
   return new Shipment(params);
 }
 
+function toNullableSecondPrecision(value: Date | undefined): Date | null {
+  if (value === undefined) {
+    return null;
+  }
+  // MySQL DATETIME(0) rounds fractional seconds, so `…:17.700` would become
+  // `…:18.000` (a future instant that breaks the return-window validation).
+  const truncated = new Date(value.getTime());
+  truncated.setMilliseconds(0);
+  return truncated;
+}
+
 export class MySQLShipmentRepository implements ShipmentRepositoryPort {
   async save(shipment: Shipment): Promise<Shipment> {
-    await pool.execute(
+    await getExecutor().execute(
       `INSERT INTO shipments (
         shipmentId, orderId, warehouseId, deliveryAddressJson, carrierId,
         carrierName, carrierServiceType, trackingCode, shipmentStatus,
@@ -87,8 +99,8 @@ export class MySQLShipmentRepository implements ShipmentRepositoryPort {
         shipment.carrier.serviceType,
         shipment.trackingCode,
         shipment.shipmentStatus,
-        shipment.departureDate ?? null,
-        shipment.deliveryDate ?? null,
+        toNullableSecondPrecision(shipment.departureDate),
+        toNullableSecondPrecision(shipment.deliveryDate),
       ],
     );
     return shipment;

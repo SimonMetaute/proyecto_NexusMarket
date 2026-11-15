@@ -150,6 +150,9 @@ const sellerService = new SellerService(
   auditLogRepository,
   productImageRepository,
   analyticsRepository,
+  shipmentRepository,
+  buyerRepository,
+  transactionManager,
 );
 
 // --- HTTP controllers ------------------------------------------------------

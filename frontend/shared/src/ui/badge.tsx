@@ -46,6 +46,8 @@ export function statusVariant(
     case 'Pending':
     case 'Draft':
     case 'Preparing':
+    case 'InPreparation':
+    case 'InTransit':
     case 'Shipped':
     case 'Maintenance':
       return 'warning';
@@ -56,6 +58,7 @@ export function statusVariant(
     case 'Closed':
       return 'destructive';
     case 'Inactive':
+    case 'Scheduled':
       return 'secondary';
     default:
       return 'outline';

@@ -388,6 +388,17 @@ export class BuyerService implements BuyerPort {
       throw ApiError.notFound(`Buyer profile not found for user ${user.userId}`);
     }
 
+    // Persist the checkout address so the seller can later prepare the order
+    // and logistics can render the shipment destination without extra input.
+    if (
+      !buyer.deliveryAddresses.some(
+        (candidate) => candidate.addressId === deliveryAddress.addressId,
+      )
+    ) {
+      buyer.addDeliveryAddress(deliveryAddress);
+      await this.buyerRepository.save(buyer);
+    }
+
     // Resolve products and enforce the single-seller cart invariant before any
     // mutation. This also gives the order a real sellerId.
     const sellerIds = new Set<string>();
@@ -602,7 +613,10 @@ export class BuyerService implements BuyerPort {
     }
     const elapsedMs = Date.now() - delivered.deliveryDate.getTime();
     const maxMs = RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000;
-    if (elapsedMs < 0 || elapsedMs > maxMs) {
+    // DATETIME columns keep second precision, so a delivery stored at the next
+    // whole second is not a "future" delivery: tolerate that sub-second skew.
+    const STORAGE_PRECISION_MS = 1000;
+    if (elapsedMs < -STORAGE_PRECISION_MS || elapsedMs > maxMs) {
       throw ApiError.invalidDomainValue(
         `The ${RETURN_WINDOW_DAYS}-day return window has expired.`,
         { deliveryDate: delivered.deliveryDate.toISOString() },

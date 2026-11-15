@@ -1,7 +1,7 @@
 # Contrato API real — NexusMarket Backend
 
 **Base URL:** `http://localhost:3000/api/v1`
-**Auditado contra:** `backend/src` (rutas, controladores y DTOs reales), commit `eebdd1a` + cambios de Fase 1.
+**Auditado contra:** `backend/src` (rutas, controladores y DTOs reales), cierre final v1 (`100 %` de los endpoints del SDD de los cuatro portales).
 **Persistencia:** MySQL (transaccional) + MongoDB (`audit_db.audit_logs`).
 
 > Este documento es la fuente de verdad para el frontend. Refleja lo que el backend **devuelve hoy**, no lo que el SDD ideal describe. Las diferencias se listan en la sección 5.
@@ -181,6 +181,9 @@ Reglas relevantes:
 | POST | `/seller/orders/:orderId/approve` | — | `200 { orderId, orderStatus }` |
 | POST | `/seller/orders/:orderId/prepare` | — | `200 { orderId, orderStatus }` |
 | GET | `/seller/dashboard` | — | `200 { activeOrders, totalSales, totalOrders, totalProducts, publishedProducts, totalStock, pendingReturns, sellerId, commercialName, verificationStatus }` |
+| GET | `/seller/store` | — | `200 { storeId, sellerId, storeName, storeDescription, storeCategory, status, rating, reviewCount, bannerUrl, logoUrl, creationDate }` |
+| GET | `/seller/settlements` | query: `startDate?`, `endDate?` (`YYYY-MM-DD`) | `200 { sellerId, period, currency, commissionRate, totalSales, commissionAmount, taxes, deductions, netAmount, orders, deliveredOrders, pendingReturns, generatedAt }` |
+| GET | `/seller/settlement/preview` | query: `startDate?`, `endDate?` | Alias de `/seller/settlements` (SDD §5.15) |
 
 `Product`: `{ productId, name, description, category?, sku?, sellerId, basePrice?, price, stock, productStatus, status, publicationDate?, brand?, createdAt }`.
 
@@ -192,7 +195,10 @@ Notas:
 - `productStatus` ∈ `Draft, Published, Inactive, Suspended, OutOfStock`; por defecto `Draft`.
 - Publicar exige vendedor verificado, producto propio, **SKU** y **al menos una imagen**; `403` si no es propio/verificado y `422 INVALID_DOMAIN_VALUE` (con `details.field = "sku" | "images"`) si falta el prerrequisito.
 - `GET/PUT /seller/products` y las imágenes se filtran por el `sellerId` del token: producto ajeno → `403`, inexistente → `404`.
+- `POST /seller/orders/:orderId/prepare` marca la orden `Preparing` y **crea automáticamente** el `Shipment` (`InPreparation`) en la misma transacción MySQL, con la bodega que tiene las unidades reservadas y la dirección guardada en el checkout. Es idempotente: si la orden ya tiene envío no se duplica (`uq_shipments_order`) y audita `SHIPMENT_CREATED` en MongoDB.
 - Stock entry verifica producto y bodega propios: `404` si no existen, `403` si pertenecen a otro vendedor.
+- `GET /seller/store` deriva la tienda del perfil del vendedor (no hay tabla `stores`): `storeId = sellerId`, `storeName = commercialName`, `storeCategory` = categoría dominante del catálogo y `status` según verificación (`Verified → Active`, `Pending → Inactive`, `Rejected → Suspended`). `rating` = `reputation` del vendedor; `reviewCount` = `0` y `bannerUrl`/`logoUrl` = `null` porque reseñas e imágenes de tienda no existen en v1.
+- `GET /seller/settlements` calcula el reporte desde MySQL: ventas brutas del periodo (órdenes distintas de `Cancelled`/`Refunded`), comisión 10 % (`commissionRate`), IVA 19 % sobre la comisión (`taxes`), deducciones = devoluciones `Approved`/`Completed` del periodo y `netAmount`. Sin `startDate`/`endDate` usa el mes en curso; fechas inválidas → `400 INVALID_REQUEST` con `details.field`.
 
 ### 2.4 Portal Administrador (`5175`)
 
@@ -270,6 +276,8 @@ Reglas relevantes:
 | Nuevo producto `/products/new` | `POST /seller/products`, `POST /seller/products/:id/variants`, `POST /seller/products/:id/images`, `POST /seller/products/:id/publish` |
 | Inventario `/inventory` | `GET /seller/warehouses`, `POST /seller/warehouses`, `GET /seller/inventory`, `POST /seller/inventory/stock-entry` |
 | Órdenes `/orders` | `GET /seller/orders`, `POST /seller/orders/:id/approve`, `POST /seller/orders/:id/prepare` |
+| Tienda `/store` | `GET /seller/store` (tienda derivada del perfil) |
+| Liquidaciones `/settlements` | `GET /seller/settlements` (filtros `startDate`, `endDate`; alias `/seller/settlement/preview`) |
 
 ### Admin/Supervisor (`5175`)
 
@@ -336,16 +344,17 @@ Las siguientes brechas fueron resueltas en esta fase (los endpoints ya son reale
 3. **Onboarding atómico seller+bodega:** `POST /admin/sellers/onboarding` ejecuta usuario + vendedor + bodega en una transacción MySQL con rollback completo.
 4. **Productos del vendedor:** `GET/PUT /seller/products` operan sobre los productos propios, incluidos borradores.
 5. **Imágenes de producto:** entidad `ProductImage`, tabla `product_images` y endpoints `GET/POST/DELETE`.
-6. **Cola de despacho y envíos:** `GET /logistics/shipments` con filtros por `status` y `warehouseId`.
+6. **Cola de despacho y envíos:** `GET /logistics/shipments` con filtros por `status` y `warehouseId`; el envío se genera al preparar la orden.
 7. **Devoluciones:** `POST /buyer/orders/:orderId/returns`, `GET /buyer/returns`, `GET /logistics/returns` y `PATCH /logistics/returns/:returnId/receive`.
 8. **Dashboards reales:** `GET /admin/dashboard` y `GET /seller/dashboard` son agregaciones SQL reales.
+9. **Tienda y liquidaciones:** `GET /seller/store` deriva la tienda del perfil verificado y `GET /seller/settlements` (alias `/seller/settlement/preview`) calcula ventas, comisión, IVA, deducciones y neto desde MySQL.
 
-Brechas que **permanecen** (fuera del alcance de esta fase; la UI las trata con estados vacíos o deshabilitados, nunca con datos inventados):
+Brechas que **permanecen** (fuera del alcance de v1; la UI las trata con estados vacíos o deshabilitados, nunca con datos inventados):
 
 1. **Variantes en catálogo:** el detalle público no incluye variantes y no hay `GET` de variantes; sólo se pueden crear desde seller.
-2. **Settlements / tienda:** `GET /seller/store` y `GET /seller/settlements` no existen.
-3. **Dashboard de supervisor:** `GET /supervisor/dashboard` sigue devolviendo `{ activeOrders: 0, totalSales: 0 }`; el portal admin usa `/admin/dashboard` para los KPIs reales.
-4. **Pago simulado:** no hay pasarela ni endpoint de pago. El checkout responde `201` (orden creada) o un error de dominio. Los tres estados del SDD se mapean así: `201` → aprobado; `4xx` (400/409/422) → rechazado con mensaje del backend; timeout de red o `5xx` → resultado desconocido / pendiente de verificación. Nunca se declara éxito sin `201`.
+2. **Dashboard de supervisor:** `GET /supervisor/dashboard` sigue devolviendo `{ activeOrders: 0, totalSales: 0 }`; el portal admin usa `/admin/dashboard` para los KPIs reales.
+3. **Pago simulado:** no hay pasarela ni endpoint de pago. El checkout responde `201` (orden creada) o un error de dominio. Los tres estados del SDD se mapean así: `201` → aprobado; `4xx` (400/409/422) → rechazado con mensaje del backend; timeout de red o `5xx` → resultado desconocido / pendiente de verificación. Nunca se declara éxito sin `201`.
+4. **Reseñas de tienda:** no existe agregado de reseñas; `GET /seller/store` devuelve `reviewCount = 0` y `rating` = reputación del vendedor.
 5. **Serialización de entidades:** `GET /seller/inventory`, `GET /seller/warehouses`, `GET /logistics/warehouses` (`WarehouseMapper`), `GET/PUT /buyer/profile`, `GET /buyer/addresses`, `GET /buyer/payment-methods` (`BuyerMapper`) y `GET /admin/users` (`UserMapper`, sin `_password`) están mapeados explícitamente.
 
 ---

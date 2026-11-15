@@ -171,5 +171,34 @@ export function createSellerRoutes(
     ),
   );
 
+  // Storefront & settlement report
+  router.get(
+    '/seller/store',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMyStore(req, res),
+    ),
+  );
+
+  router.get(
+    '/seller/settlements',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMySettlements(req, res),
+    ),
+  );
+
+  // SDD §5.15 alias (`/seller/settlement/preview`).
+  router.get(
+    '/seller/settlement/preview',
+    authMiddleware,
+    requireRole('SELLER'),
+    asyncHandler((req: Request, res: Response) =>
+      sellerController.consultMySettlements(req, res),
+    ),
+  );
+
   return router;
 }

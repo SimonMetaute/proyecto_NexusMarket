@@ -3,6 +3,8 @@ import type {
   AdminDashboardStats,
   AnalyticsRepositoryPort,
   SellerDashboardStats,
+  SellerSettlementStats,
+  SettlementPeriod,
 } from '../../domain/ports/out/AnalyticsRepositoryPort.js';
 import { pool } from '../database/mysql-pool.js';
 import { toNumber } from './mappers/rowMappers.js';
@@ -121,6 +123,75 @@ export class MySQLAnalyticsRepository implements AnalyticsRepositoryPort {
       totalProducts,
       publishedProducts,
       totalStock,
+      pendingReturns: pendingReturnsCount,
+    };
+  }
+
+  /**
+   * Settlement aggregates for one period. Sales are grouped by order date and
+   * refunds by return request date, so a period report is reproducible.
+   */
+  async getSellerSettlement(
+    sellerId: string,
+    period: SettlementPeriod,
+  ): Promise<SellerSettlementStats> {
+    const pendingReturns = placeholders(PENDING_RETURN_STATUSES);
+    const range = [sellerId, period.startDate, period.endDate];
+
+    const [
+      orderCount,
+      deliveredOrders,
+      grossSales,
+      deliveredSales,
+      refundedAmount,
+      pendingReturnsCount,
+    ] = await Promise.all([
+      scalar(
+        `SELECT COUNT(*) AS value FROM orders
+         WHERE sellerId = ? AND creationDate BETWEEN ? AND ?`,
+        range,
+      ),
+      scalar(
+        `SELECT COUNT(*) AS value FROM orders
+         WHERE sellerId = ? AND orderStatus = 'Delivered'
+           AND creationDate BETWEEN ? AND ?`,
+        range,
+      ),
+      scalar(
+        `SELECT COALESCE(SUM(total), 0) AS value FROM orders
+         WHERE sellerId = ? AND orderStatus NOT IN ('Cancelled', 'Refunded')
+           AND creationDate BETWEEN ? AND ?`,
+        range,
+      ),
+      scalar(
+        `SELECT COALESCE(SUM(total), 0) AS value FROM orders
+         WHERE sellerId = ? AND orderStatus = 'Delivered'
+           AND creationDate BETWEEN ? AND ?`,
+        range,
+      ),
+      scalar(
+        `SELECT COALESCE(SUM(r.refundAmount), 0) AS value
+         FROM product_returns r
+         INNER JOIN orders o ON o.orderId = r.orderId
+         WHERE o.sellerId = ? AND r.returnStatus IN ('Approved', 'Completed')
+           AND r.requestDate BETWEEN ? AND ?`,
+        range,
+      ),
+      scalar(
+        `SELECT COUNT(*) AS value
+         FROM product_returns r
+         INNER JOIN orders o ON o.orderId = r.orderId
+         WHERE o.sellerId = ? AND r.returnStatus IN (${pendingReturns})`,
+        [sellerId, ...PENDING_RETURN_STATUSES],
+      ),
+    ]);
+
+    return {
+      orderCount,
+      deliveredOrders,
+      grossSales,
+      deliveredSales,
+      refundedAmount,
       pendingReturns: pendingReturnsCount,
     };
   }

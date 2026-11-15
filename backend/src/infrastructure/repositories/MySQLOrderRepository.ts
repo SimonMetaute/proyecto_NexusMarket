@@ -5,6 +5,11 @@ import type { Buyer } from '../../domain/entities/Buyer.js';
 import type { Seller } from '../../domain/entities/Seller.js';
 import { OrderStatus } from '../../domain/model/enums.js';
 import { pool } from '../database/mysql-pool.js';
+import {
+  getExecutor,
+  runInTransaction,
+  type DbExecutor,
+} from '../database/mysql-transaction.js';
 import { toDate, toNullableDate, toNumber } from './mappers/rowMappers.js';
 
 interface OrderRow extends RowDataPacket {
@@ -100,64 +105,65 @@ export class MySQLOrderRepository implements OrderRepositoryPort {
   }
 
   async save(order: Order): Promise<Order> {
-    const connection = await pool.getConnection();
-    try {
-      await connection.beginTransaction();
+    // Compose with an outer unit of work (`prepareOrder`); otherwise open a
+    // local transaction so the order header and its lines stay consistent.
+    const executor = getExecutor();
+    if (executor !== pool) {
+      await this.persist(executor, order);
+      return order;
+    }
+    return runInTransaction(async () => {
+      await this.persist(getExecutor(), order);
+      return order;
+    });
+  }
 
-      await connection.execute(
-        `INSERT INTO orders (
-          orderId, buyerId, sellerId, subtotal, taxes, shippingCost, total,
-          orderStatus, creationDate, estimatedDeliveryDate
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          buyerId = VALUES(buyerId),
-          sellerId = VALUES(sellerId),
-          subtotal = VALUES(subtotal),
-          taxes = VALUES(taxes),
-          shippingCost = VALUES(shippingCost),
-          total = VALUES(total),
-          orderStatus = VALUES(orderStatus),
-          estimatedDeliveryDate = VALUES(estimatedDeliveryDate)`,
+  private async persist(executor: DbExecutor, order: Order): Promise<void> {
+    await executor.execute(
+      `INSERT INTO orders (
+        orderId, buyerId, sellerId, subtotal, taxes, shippingCost, total,
+        orderStatus, creationDate, estimatedDeliveryDate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        buyerId = VALUES(buyerId),
+        sellerId = VALUES(sellerId),
+        subtotal = VALUES(subtotal),
+        taxes = VALUES(taxes),
+        shippingCost = VALUES(shippingCost),
+        total = VALUES(total),
+        orderStatus = VALUES(orderStatus),
+        estimatedDeliveryDate = VALUES(estimatedDeliveryDate)`,
+      [
+        order.orderId,
+        order.buyerId,
+        order.sellerId,
+        order.subtotal,
+        order.taxes,
+        order.shippingCost,
+        order.total,
+        order.orderStatus,
+        order.creationDate,
+        order.estimatedDeliveryDate ?? null,
+      ],
+    );
+
+    await executor.execute('DELETE FROM order_lines WHERE orderId = ?', [order.orderId]);
+
+    for (const line of order.orderLines) {
+      await executor.execute(
+        `INSERT INTO order_lines (
+          orderLineId, orderId, productId, variantId, quantity, unitPrice, subtotal
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
+          line.orderLineId,
           order.orderId,
-          order.buyerId,
-          order.sellerId,
-          order.subtotal,
-          order.taxes,
-          order.shippingCost,
-          order.total,
-          order.orderStatus,
-          order.creationDate,
-          order.estimatedDeliveryDate ?? null,
+          line.productId,
+          line.variantId ?? null,
+          line.quantity,
+          line.unitPrice,
+          line.subtotal,
         ],
       );
-
-      await connection.execute('DELETE FROM order_lines WHERE orderId = ?', [order.orderId]);
-
-      for (const line of order.orderLines) {
-        await connection.execute(
-          `INSERT INTO order_lines (
-            orderLineId, orderId, productId, variantId, quantity, unitPrice, subtotal
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            line.orderLineId,
-            order.orderId,
-            line.productId,
-            line.variantId ?? null,
-            line.quantity,
-            line.unitPrice,
-            line.subtotal,
-          ],
-        );
-      }
-
-      await connection.commit();
-      return order;
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
     }
   }
 
