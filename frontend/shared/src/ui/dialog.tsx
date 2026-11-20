@@ -39,7 +39,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -52,13 +52,13 @@ export function Dialog({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          'max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-xl',
+          'max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#D9DADC]/12 bg-card p-6 shadow-[0_40px_90px_-40px_rgba(0,0,0,1)] animate-scale-in',
           className,
         )}
       >
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold">{title}</h2>
+          <div className="space-y-1.5">
+            <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
             {description !== undefined ? (
               <p className="text-sm text-muted-foreground">{description}</p>
             ) : null}
@@ -73,9 +73,11 @@ export function Dialog({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <div className="mt-4">{children}</div>
+        <div className="mt-5">{children}</div>
         {footer !== undefined ? (
-          <div className="mt-5 flex justify-end gap-2">{footer}</div>
+          <div className="mt-6 flex justify-end gap-2 border-t border-[#D9DADC]/10 pt-4">
+            {footer}
+          </div>
         ) : null}
       </div>
     </div>
@@ -95,12 +97,15 @@ export function FormField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium">
+      <label
+        htmlFor={htmlFor}
+        className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+      >
         {label}
       </label>
       {children}
       {error !== undefined ? (
-        <p className="text-xs text-destructive">{error}</p>
+        <p className="text-xs text-red-300">{error}</p>
       ) : null}
     </div>
   );

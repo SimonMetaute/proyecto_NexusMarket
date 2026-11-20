@@ -117,7 +117,7 @@ export function CartPage() {
           <Button
             variant="outline"
             size="sm"
-            className="text-destructive"
+            className="border-red-400/25 text-red-300 hover:border-red-400/40 hover:bg-red-400/10"
             loading={clear.isPending}
             onClick={() => clear.mutate()}
           >
@@ -145,76 +145,87 @@ export function CartPage() {
             {cart.cartLines.map((line) => (
               <div
                 key={line.cartLineId}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="card-hover flex flex-col gap-4 rounded-2xl border border-[#D9DADC]/10 bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 space-y-1">
-                  <p className="truncate font-medium">{lineName(line.productId)}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="truncate font-semibold text-foreground">
+                    {lineName(line.productId)}
+                  </p>
+                  <p className="truncate font-mono text-[11px] text-muted-foreground">
                     {line.variantId !== undefined ? `Variante ${line.variantId} · ` : ''}
                     Producto {line.productId}
                   </p>
-                  <p className="text-sm">
+                  <p className="text-sm text-muted-foreground tabular-nums">
                     {formatMoney(line.unitPrice)} · subtotal{' '}
-                    <span className="font-medium">{formatMoney(line.subtotal)}</span>
+                    <span className="font-semibold text-primary">
+                      {formatMoney(line.subtotal)}
+                    </span>
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label="Disminuir cantidad"
-                    disabled={line.quantity <= 1 || updateQuantity.isPending}
-                    onClick={() =>
-                      updateQuantity.mutate({
-                        cartLineId: line.cartLineId,
-                        quantity: line.quantity - 1,
-                      })
-                    }
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-10 text-center text-sm font-medium">
-                    {line.quantity}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label="Aumentar cantidad"
-                    disabled={updateQuantity.isPending}
-                    onClick={() =>
-                      updateQuantity.mutate({
-                        cartLineId: line.cartLineId,
-                        quantity: line.quantity + 1,
-                      })
-                    }
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center rounded-xl border border-[#D9DADC]/15 bg-[#1E1F22]/60">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Disminuir cantidad"
+                      className="rounded-r-none"
+                      disabled={line.quantity <= 1 || updateQuantity.isPending}
+                      onClick={() =>
+                        updateQuantity.mutate({
+                          cartLineId: line.cartLineId,
+                          quantity: line.quantity - 1,
+                        })
+                      }
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-10 text-center text-sm font-semibold tabular-nums">
+                      {line.quantity}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Aumentar cantidad"
+                      className="rounded-l-none"
+                      disabled={updateQuantity.isPending}
+                      onClick={() =>
+                        updateQuantity.mutate({
+                          cartLineId: line.cartLineId,
+                          quantity: line.quantity + 1,
+                        })
+                      }
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     aria-label="Eliminar línea"
+                    className="text-red-300 hover:bg-red-400/10 hover:text-red-200"
                     disabled={removeItem.isPending}
                     onClick={() => removeItem.mutate(line.cartLineId)}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
           </div>
 
-          <aside className="h-fit space-y-4 rounded-lg border border-border bg-card p-5">
-            <h2 className="font-semibold">Resumen</h2>
+          <aside className="h-fit space-y-4 rounded-2xl border border-[#D9DADC]/12 bg-card p-5 lg:sticky lg:top-24">
+            <h2 className="text-base font-semibold tracking-tight">Resumen</h2>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Subtotal</dt>
-                <dd>{formatMoney(cart.subtotal)}</dd>
+                <dd className="tabular-nums">{formatMoney(cart.subtotal)}</dd>
               </div>
-              <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
+              <div className="flex items-center justify-between border-t border-[#D9DADC]/10 pt-2 text-base font-semibold">
                 <dt>Total</dt>
-                <dd>{formatMoney(cart.total)}</dd>
+                <dd className="text-xl font-bold text-primary tabular-nums">
+                  {formatMoney(cart.total)}
+                </dd>
               </div>
             </dl>
             <Link to="/checkout" className="block">

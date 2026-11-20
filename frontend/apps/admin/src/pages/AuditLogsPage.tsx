@@ -57,6 +57,11 @@ export function AuditLogsPage() {
       <PageHeader
         title="Consola de auditoría"
         description="Registros persistidos en MongoDB (audit_db.audit_logs), paginados y filtrables."
+        actions={
+          <Badge variant="secondary" className="tabular-nums">
+            {total} eventos
+          </Badge>
+        }
       />
 
       <Card>
@@ -108,6 +113,22 @@ export function AuditLogsPage() {
               }}
             />
           </FormField>
+          <div className="flex items-end sm:col-span-2 lg:col-span-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setActorId('');
+                setAction('');
+                setFrom('');
+                setTo('');
+                setPage(1);
+              }}
+            >
+              Limpiar filtros
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -148,17 +169,19 @@ export function AuditLogsPage() {
             <TableBody>
               {logsQuery.data.items.map((log) => (
                 <TableRow key={log.id}>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap text-muted-foreground tabular-nums">
                     {formatDate(log.timestamp)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{log.action}</Badge>
+                    <Badge variant="info" className="font-mono font-medium">
+                      {log.action}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {log.actorId}
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    #{log.actorId.slice(0, 8)}
                   </TableCell>
                   <TableCell className="max-w-md">
-                    <code className="block truncate text-xs">
+                    <code className="block truncate rounded-lg bg-white/[0.04] px-2 py-1 font-mono text-[11px] text-muted-foreground">
                       {JSON.stringify(log.details)}
                     </code>
                   </TableCell>

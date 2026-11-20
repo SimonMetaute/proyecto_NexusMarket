@@ -12,6 +12,7 @@ import {
   PageHeader,
   Skeleton,
   checkout,
+  cn,
   formatMoney,
   getCart,
   listAddresses,
@@ -101,11 +102,13 @@ export function CheckoutPage() {
   // antes que los estados de carga/error del carrito para no ocultar la orden.
   if (outcome?.kind === 'approved') {
     return (
-      <div className="mx-auto max-w-xl space-y-5">
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-center">
-          <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-700" />
-          <h1 className="mt-3 text-xl font-semibold text-emerald-900">Pago aprobado</h1>
-          <p className="mt-1 text-sm text-emerald-800">
+      <div className="mx-auto max-w-xl space-y-5 animate-scale-in">
+        <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.08] p-8 text-center">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-300" />
+          <h1 className="mt-3 text-xl font-bold tracking-tight text-emerald-100">
+            Pago aprobado
+          </h1>
+          <p className="mt-1 text-sm text-emerald-100/70">
             El servidor confirmó la orden. Este es el único estado que se declara como
             éxito.
           </p>
@@ -118,15 +121,17 @@ export function CheckoutPage() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Order ID</span>
-              <span className="font-mono text-xs">{outcome.order.orderId}</span>
+              <span className="font-mono text-xs tabular-nums">{outcome.order.orderId}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Estado</span>
               <span className="font-medium">{outcome.order.orderStatus}</span>
             </div>
-            <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
+            <div className="flex justify-between border-t border-[#D9DADC]/10 pt-2 text-base font-semibold">
               <span>Total</span>
-              <span>{formatMoney(outcome.order.total)}</span>
+              <span className="text-primary tabular-nums">
+                {formatMoney(outcome.order.total)}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -230,7 +235,7 @@ export function CheckoutPage() {
           </span>
           <Link
             to="/orders"
-            className="mt-2 inline-block font-medium text-amber-900 underline"
+            className="mt-2 inline-block font-semibold text-primary underline"
           >
             Revisar mis órdenes
           </Link>
@@ -273,12 +278,17 @@ export function CheckoutPage() {
               {addresses.map((address) => (
                 <label
                   key={address.addressId}
-                  className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 text-sm hover:bg-muted/50"
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors',
+                    selectedAddress?.addressId === address.addressId
+                      ? 'border-primary/40 bg-primary/[0.06]'
+                      : 'border-[#D9DADC]/12 hover:border-[#D9DADC]/25 hover:bg-white/[0.04]',
+                  )}
                 >
                   <input
                     type="radio"
                     name="address"
-                    className="mt-1"
+                    className="mt-1 accent-[#FFC93C]"
                     checked={selectedAddress?.addressId === address.addressId}
                     onChange={() => setSelectedAddressId(address.addressId)}
                   />
@@ -321,12 +331,17 @@ export function CheckoutPage() {
               {payments.map((payment) => (
                 <label
                   key={payment.paymentMethodId}
-                  className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 text-sm hover:bg-muted/50"
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors',
+                    selectedPayment?.paymentMethodId === payment.paymentMethodId
+                      ? 'border-primary/40 bg-primary/[0.06]'
+                      : 'border-[#D9DADC]/12 hover:border-[#D9DADC]/25 hover:bg-white/[0.04]',
+                  )}
                 >
                   <input
                     type="radio"
                     name="payment"
-                    className="mt-1"
+                    className="mt-1 accent-[#FFC93C]"
                     checked={selectedPayment?.paymentMethodId === payment.paymentMethodId}
                     onChange={() => setSelectedPaymentId(payment.paymentMethodId)}
                   />
@@ -345,26 +360,28 @@ export function CheckoutPage() {
           </Card>
         </div>
 
-        <aside className="h-fit space-y-4 rounded-lg border border-border bg-card p-5">
-          <h2 className="font-semibold">Resumen del pedido</h2>
+        <aside className="h-fit space-y-4 rounded-2xl border border-[#D9DADC]/12 bg-card p-5 lg:sticky lg:top-24">
+          <h2 className="text-base font-semibold tracking-tight">Resumen del pedido</h2>
           <ul className="space-y-2 text-sm">
             {cart.cartLines.map((line) => (
               <li key={line.cartLineId} className="flex justify-between gap-3">
                 <span className="text-muted-foreground">
                   {line.quantity} × producto {line.productId.slice(0, 8)}…
                 </span>
-                <span>{formatMoney(line.subtotal)}</span>
+                <span className="tabular-nums">{formatMoney(line.subtotal)}</span>
               </li>
             ))}
           </ul>
-          <dl className="space-y-2 border-t border-border pt-3 text-sm">
+          <dl className="space-y-2 border-t border-[#D9DADC]/10 pt-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
-              <dd>{formatMoney(cart.subtotal)}</dd>
+              <dd className="tabular-nums">{formatMoney(cart.subtotal)}</dd>
             </div>
-            <div className="flex justify-between text-base font-semibold">
+            <div className="flex items-center justify-between text-base font-semibold">
               <dt>Total</dt>
-              <dd>{formatMoney(cart.total)}</dd>
+              <dd className="text-xl font-bold text-primary tabular-nums">
+                {formatMoney(cart.total)}
+              </dd>
             </div>
           </dl>
           <Button

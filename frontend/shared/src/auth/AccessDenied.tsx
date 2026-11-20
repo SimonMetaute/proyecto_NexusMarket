@@ -11,19 +11,19 @@ export function AccessDenied({ portal }: { portal: PortalDefinition }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
-          <ShieldX className="h-7 w-7 text-destructive" />
+      <div className="w-full max-w-md rounded-2xl border border-[#D9DADC]/12 bg-card p-8 text-center shadow-[0_30px_70px_-45px_rgba(0,0,0,1)] animate-scale-in">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/25 bg-red-400/10">
+          <ShieldX className="h-7 w-7 text-red-300" />
         </div>
-        <p className="mt-4 text-xs font-semibold uppercase tracking-widest text-destructive">
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
           403
         </p>
-        <h1 className="mt-1 text-2xl font-semibold">Acceso Denegado</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight">Acceso denegado</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Tu sesión pertenece al rol{' '}
-          <span className="font-medium text-foreground">{role ?? 'desconocido'}</span>,
+          <span className="font-semibold text-foreground">{role ?? 'desconocido'}</span>,
           que no tiene acceso al portal{' '}
-          <span className="font-medium text-foreground">{portal.name}</span>.
+          <span className="font-semibold text-foreground">{portal.name}</span>.
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           Roles permitidos en este portal: {portal.allowedRoles.join(', ')}.

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { ShoppingBag } from 'lucide-react';
 import {
   Alert,
   Button,
@@ -55,11 +56,22 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-lg">
-        <div className="mb-6 text-center">
-          <p className="text-sm text-muted-foreground">NexusMarket · {portal.name}</p>
-          <h1 className="text-2xl font-semibold">Crear cuenta de comprador</h1>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-6">
+      <div className="hero-grid pointer-events-none absolute inset-0 opacity-40" />
+      <div className="pointer-events-none absolute -top-32 right-1/4 h-80 w-80 rounded-full bg-primary/[0.08] blur-3xl" />
+      <div className="relative w-full max-w-lg animate-fade-up">
+        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_16px_40px_-18px_rgba(255,201,60,0.9)]">
+            <ShoppingBag className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              NexusMarket · {portal.name}
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">
+              Crear cuenta de comprador
+            </h1>
+          </div>
         </div>
 
         <Card>
@@ -158,7 +170,7 @@ export function RegisterPage() {
             {success === null ? (
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 ¿Ya tienes cuenta?{' '}
-                <Link className="font-medium text-accent-foreground" to="/login">
+                <Link className="font-semibold text-primary hover:text-primary-hover" to="/login">
                   Inicia sesión
                 </Link>
               </p>

@@ -15,6 +15,7 @@ import {
   PageHeader,
   Select,
   Skeleton,
+  StatCard,
   Table,
   TableBody,
   TableCell,
@@ -31,7 +32,7 @@ import {
   statusVariant,
   toApiError,
 } from '@nexus/shared';
-import { PackagePlus, Warehouse } from 'lucide-react';
+import { Boxes, PackageCheck, PackagePlus, Warehouse } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
 
 export function InventoryPage() {
@@ -119,6 +120,17 @@ export function InventoryPage() {
   const firstError =
     warehousesQuery.error ?? inventoryQuery.error ?? profileQuery.error;
 
+  const warehouses = warehousesQuery.data ?? [];
+  const inventory = inventoryQuery.data ?? [];
+  const availableTotal = inventory.reduce(
+    (sum, item) => sum + item.availableStock,
+    0,
+  );
+  const reservedTotal = inventory.reduce(
+    (sum, item) => sum + item.reservedStock,
+    0,
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -154,6 +166,37 @@ export function InventoryPage() {
 
       {!isLoading && (firstError === null || firstError === undefined) ? (
         <>
+          <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              icon={Warehouse}
+              label="Bodegas"
+              value={warehouses.length}
+              hint="Centros de almacenamiento"
+              tone="primary"
+            />
+            <StatCard
+              icon={Boxes}
+              label="Registros de stock"
+              value={inventory.length}
+              hint="Producto por bodega"
+              tone="info"
+            />
+            <StatCard
+              icon={PackageCheck}
+              label="Disponible"
+              value={availableTotal}
+              hint="Unidades listas para vender"
+              tone="success"
+            />
+            <StatCard
+              icon={PackageCheck}
+              label="Reservado"
+              value={reservedTotal}
+              hint="Comprometido en órdenes"
+              tone="warning"
+            />
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle>Registrar entrada de stock</CardTitle>
@@ -252,7 +295,12 @@ export function InventoryPage() {
           </Card>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Bodegas</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold tracking-tight">Bodegas</h2>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {warehouses.length} registradas
+              </span>
+            </div>
             {(warehousesQuery.data ?? []).length === 0 ? (
               <EmptyState
                 icon={<Warehouse className="h-10 w-10" />}
@@ -297,7 +345,14 @@ export function InventoryPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Stock por producto y bodega</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold tracking-tight">
+                Stock por producto y bodega
+              </h2>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {inventory.length} registros
+              </span>
+            </div>
             {(inventoryQuery.data ?? []).length === 0 ? (
               <EmptyState
                 title="Sin registros de inventario"

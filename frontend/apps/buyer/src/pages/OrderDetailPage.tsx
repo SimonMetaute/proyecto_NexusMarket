@@ -13,6 +13,7 @@ import {
   PageHeader,
   Select,
   Skeleton,
+  Stepper,
   Textarea,
   formatDate,
   formatMoney,
@@ -27,6 +28,22 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 const RETURN_REASONS = ['Damage', 'Shipping Error', 'Disagreement', 'Other'];
+
+const ORDER_STEPS = [
+  { label: 'Creada', hint: 'Orden registrada' },
+  { label: 'En preparación', hint: 'Seller alista el pedido' },
+  { label: 'En tránsito', hint: 'En camino' },
+  { label: 'Entregada', hint: 'Recibida por el comprador' },
+] as const;
+
+/** Traduce el estado real del backend al índice visual del stepper. */
+const STEP_BY_STATUS: Record<string, number> = {
+  Pending: 0,
+  Confirmed: 0,
+  Preparing: 1,
+  Sent: 2,
+  Delivered: 3,
+};
 
 export function OrderDetailPage() {
   const { orderId = '' } = useParams();
@@ -113,6 +130,18 @@ export function OrderDetailPage() {
             }
           />
 
+          <Card className="p-5 sm:p-6">
+            <Stepper
+              steps={ORDER_STEPS}
+              current={STEP_BY_STATUS[data.orderStatus] ?? 0}
+              errorLabel={
+                data.orderStatus === 'Cancelled' || data.orderStatus === 'Refunded'
+                  ? `Orden ${data.orderStatus.toLowerCase()}`
+                  : undefined
+              }
+            />
+          </Card>
+
           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
             <Card>
               <CardHeader>
@@ -143,11 +172,35 @@ export function OrderDetailPage() {
             <aside className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Totales</CardTitle>
+                  <CardTitle>Resumen</CardTitle>
                 </CardHeader>
-                <CardContent className="flex justify-between text-base font-semibold">
-                  <span>Total</span>
-                  <span>{formatMoney(data.total)}</span>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Ítems</span>
+                    <span className="font-semibold text-foreground tabular-nums">
+                      {data.items.reduce((total, item) => total + item.quantity, 0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Estado</span>
+                    <Badge variant={statusVariant(data.orderStatus)}>
+                      {data.orderStatus}
+                    </Badge>
+                  </div>
+                  {data.deliveryDate !== undefined ? (
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Entrega</span>
+                      <span className="text-foreground tabular-nums">
+                        {formatDate(data.deliveryDate)}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex items-center justify-between border-t border-[#D9DADC]/10 pt-3 text-base">
+                    <span className="font-medium text-foreground">Total</span>
+                    <span className="text-xl font-bold text-primary tabular-nums">
+                      {formatMoney(data.total)}
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -168,7 +221,7 @@ export function OrderDetailPage() {
                       {orderReturns.map((returnCase) => (
                         <li
                           key={returnCase.returnId}
-                          className="rounded-lg border border-border p-2"
+                          className="rounded-xl border border-[#D9DADC]/12 bg-white/[0.02] p-3"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <Badge variant={statusVariant(returnCase.returnStatus)}>

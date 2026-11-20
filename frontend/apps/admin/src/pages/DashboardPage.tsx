@@ -9,22 +9,23 @@ import {
   ErrorState,
   PageHeader,
   Skeleton,
+  StatCard,
+  formatMoney,
   getAdminDashboard,
   getSupervisorDashboard,
   getSupervisorHealth,
-  formatMoney,
   useAuth,
 } from '@nexus/shared';
 import {
   Activity,
   Package,
+  PackageCheck,
   RotateCcw,
   ShoppingCart,
   Store,
   TrendingUp,
   Users,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 export function DashboardPage() {
   const { session } = useAuth();
@@ -59,6 +60,11 @@ export function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description={`Sesión ${session?.user.role ?? ''} · agregaciones reales del backend.`}
+        actions={
+          <Badge variant={isAdmin ? 'default' : 'info'}>
+            {isAdmin ? 'Vista administrador' : 'Vista supervisor'}
+          </Badge>
+        }
       />
 
       {isSupervisor ? (
@@ -70,8 +76,8 @@ export function DashboardPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="h-28 w-full" />
           ))}
         </div>
@@ -89,46 +95,62 @@ export function DashboardPage() {
       ) : null}
 
       {isAdmin && adminQuery.data !== undefined ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric
-            icon={<ShoppingCart className="h-4 w-4" />}
+        <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            icon={ShoppingCart}
             label="Órdenes activas"
-            value={String(adminQuery.data.activeOrders)}
+            value={adminQuery.data.activeOrders}
+            hint="En curso en el marketplace"
+            tone="primary"
           />
-          <Metric
-            icon={<TrendingUp className="h-4 w-4" />}
+          <StatCard
+            icon={TrendingUp}
             label="Ventas totales"
             value={formatMoney(adminQuery.data.totalSales)}
+            hint="Facturación agregada"
+            tone="success"
           />
-          <Metric
-            icon={<ShoppingCart className="h-4 w-4" />}
+          <StatCard
+            icon={ShoppingCart}
             label="Órdenes totales"
-            value={String(adminQuery.data.totalOrders)}
+            value={adminQuery.data.totalOrders}
+            hint="Histórico completo"
+            tone="info"
           />
-          <Metric
-            icon={<Users className="h-4 w-4" />}
+          <StatCard
+            icon={Users}
             label="Usuarios"
-            value={String(adminQuery.data.totalUsers)}
+            value={adminQuery.data.totalUsers}
+            hint="Cuentas registradas"
+            tone="primary"
           />
-          <Metric
-            icon={<Store className="h-4 w-4" />}
+          <StatCard
+            icon={Store}
             label="Vendedores"
-            value={String(adminQuery.data.totalSellers)}
+            value={adminQuery.data.totalSellers}
+            hint="Cuentas de vendedor"
+            tone="warning"
           />
-          <Metric
-            icon={<Package className="h-4 w-4" />}
+          <StatCard
+            icon={Package}
             label="Productos"
-            value={String(adminQuery.data.totalProducts)}
+            value={adminQuery.data.totalProducts}
+            hint="Incluye borradores"
+            tone="info"
           />
-          <Metric
-            icon={<Package className="h-4 w-4" />}
+          <StatCard
+            icon={PackageCheck}
             label="Publicados"
-            value={String(adminQuery.data.publishedProducts)}
+            value={adminQuery.data.publishedProducts}
+            hint="Visibles en el catálogo"
+            tone="success"
           />
-          <Metric
-            icon={<RotateCcw className="h-4 w-4" />}
+          <StatCard
+            icon={RotateCcw}
             label="Devoluciones pendientes"
-            value={String(adminQuery.data.pendingReturns)}
+            value={adminQuery.data.pendingReturns}
+            hint="Requieren gestión"
+            tone="danger"
           />
         </div>
       ) : null}
@@ -136,16 +158,20 @@ export function DashboardPage() {
       {isSupervisor ? (
         <>
           {supervisorQuery.data !== undefined ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Metric
-                icon={<ShoppingCart className="h-4 w-4" />}
+            <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard
+                icon={ShoppingCart}
                 label="Órdenes activas"
-                value={String(supervisorQuery.data.activeOrders)}
+                value={supervisorQuery.data.activeOrders}
+                hint="Resumen del supervisor"
+                tone="primary"
               />
-              <Metric
-                icon={<TrendingUp className="h-4 w-4" />}
+              <StatCard
+                icon={TrendingUp}
                 label="Ventas totales"
                 value={String(supervisorQuery.data.totalSales)}
+                hint="Valor reportado por el endpoint"
+                tone="success"
               />
             </div>
           ) : null}
@@ -154,12 +180,15 @@ export function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-4 w-4" /> Salud del marketplace
+                  <Activity className="h-4 w-4 text-primary" /> Salud del marketplace
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex items-center gap-4 text-sm">
-                <Badge variant="success">{healthQuery.data.status}</Badge>
-                <span className="text-muted-foreground">
+                <Badge variant="success">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                  {healthQuery.data.status}
+                </Badge>
+                <span className="text-muted-foreground tabular-nums">
                   Uptime reportado: {healthQuery.data.uptime}%
                 </span>
               </CardContent>
@@ -174,26 +203,6 @@ export function DashboardPage() {
           con rol SUPERVISOR.
         </Alert>
       ) : null}
-    </div>
-  );
-}
-
-function Metric({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
     </div>
   );
 }

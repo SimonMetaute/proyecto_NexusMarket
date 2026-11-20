@@ -24,6 +24,7 @@ import {
   formatDate,
   listAdminUsers,
   rejectSeller,
+  statusVariant,
   toApiError,
 } from '@nexus/shared';
 import type { AdminUserFilters } from '@nexus/shared';
@@ -209,7 +210,14 @@ export function UsersPage() {
       ) : null}
 
       {usersQuery.data !== undefined && usersQuery.data.length > 0 ? (
-        <Table>
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold tracking-tight">Directorio</h2>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {usersQuery.data.length} usuarios
+            </span>
+          </div>
+          <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Usuario</TableHead>
@@ -226,8 +234,8 @@ export function UsersPage() {
                   <div className="font-medium">
                     {user.firstName} {user.lastName}
                   </div>
-                  <div className="font-mono text-xs text-muted-foreground">
-                    {user.userId}
+                  <div className="font-mono text-[11px] text-muted-foreground">
+                    #{user.userId.slice(0, 8)}
                   </div>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
@@ -235,7 +243,7 @@ export function UsersPage() {
                   <Badge variant="outline">{user.role}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">{user.status}</Badge>
+                  <Badge variant={statusVariant(user.status)}>{user.status}</Badge>
                 </TableCell>
                 <TableCell>
                   {user.registrationDate !== undefined
@@ -245,7 +253,8 @@ export function UsersPage() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+          </Table>
+        </>
       ) : null}
     </div>
   );

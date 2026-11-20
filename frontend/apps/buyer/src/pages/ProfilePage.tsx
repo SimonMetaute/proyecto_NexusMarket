@@ -108,22 +108,38 @@ export function ProfilePage() {
         <CardHeader>
           <CardTitle>Cuenta</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
+        <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
           <div>
-            <p className="text-xs text-muted-foreground">Buyer ID</p>
-            <p className="font-mono text-xs">{profile.buyerId}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              Buyer ID
+            </p>
+            <p className="mt-1 font-mono text-xs text-foreground tabular-nums">
+              {profile.buyerId}
+            </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">User ID</p>
-            <p className="font-mono text-xs">{profile.userId}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              User ID
+            </p>
+            <p className="mt-1 font-mono text-xs text-foreground tabular-nums">
+              {profile.userId}
+            </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Nivel de confianza</p>
-            <Badge variant="secondary">{profile.trustLevel}</Badge>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              Nivel de confianza
+            </p>
+            <div className="mt-1">
+              <Badge variant="secondary">{profile.trustLevel}</Badge>
+            </div>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Última compra</p>
-            <p>{formatDate(profile.lastPurchaseDate)}</p>
+            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              Última compra
+            </p>
+            <p className="mt-1 text-foreground tabular-nums">
+              {formatDate(profile.lastPurchaseDate)}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -155,7 +171,7 @@ export function ProfilePage() {
             {addresses.map((address) => (
               <div
                 key={address.addressId}
-                className="rounded-md border border-border p-3 text-sm"
+                className="rounded-xl border border-[#D9DADC]/12 bg-white/[0.02] p-3 text-sm transition-colors hover:border-[#D9DADC]/20"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -186,7 +202,7 @@ export function ProfilePage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-destructive"
+                    className="text-red-300 hover:bg-red-400/10 hover:text-red-200"
                     loading={remove.isPending}
                     onClick={() => remove.mutate(address.addressId)}
                   >
@@ -224,7 +240,7 @@ export function ProfilePage() {
             {payments.map((payment) => (
               <div
                 key={payment.paymentMethodId}
-                className="rounded-md border border-border p-3 text-sm"
+                className="rounded-xl border border-[#D9DADC]/12 bg-white/[0.02] p-3 text-sm transition-colors hover:border-[#D9DADC]/20"
               >
                 <div className="flex items-center justify-between">
                   <p className="font-medium">

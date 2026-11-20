@@ -1,31 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+/* Escaneo explícito: los 4 portales y los componentes compartidos. */
+@source "../../apps/**/*.{ts,tsx}";
+@source "./**/*.{ts,tsx}";
+
+/*
+ * NexusMarket design tokens (dark, high-contrast).
+ * Every portal imports this file, so the identity is inherited automatically.
+ */
 @theme {
-  --color-background: #f8fafc;
-  --color-foreground: #0f172a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  --color-border: #e2e8f0;
-  --color-input: #cbd5e1;
-  --color-primary: #0f172a;
-  --color-primary-foreground: #f8fafc;
-  --color-secondary: #e2e8f0;
-  --color-secondary-foreground: #0f172a;
-  --color-accent: #eff6ff;
-  --color-accent-foreground: #1d4ed8;
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --radius-lg: 0.75rem;
-  --radius-md: 0.5rem;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  --color-background: #2b2d31;
+  --color-deep: #1e1f22;
+  --color-sidebar: #1e1f22;
+  --color-card: #313338;
+  --color-card-foreground: #d9dadc;
+  --color-elevated: #383a40;
+
+  --color-foreground: #d9dadc;
+  --color-muted: #383a40;
+  --color-muted-foreground: #949ba4;
+
+  --color-border: #45474b;
+  --color-input: #4a4d54;
+
+  --color-primary: #ffc93c;
+  --color-primary-hover: #ffd466;
+  --color-primary-foreground: #1e1f22;
+
+  --color-secondary: #3a3d44;
+  --color-secondary-foreground: #d9dadc;
+
+  --color-accent: rgba(255, 201, 60, 0.12);
+  --color-accent-foreground: #ffd466;
+
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #1e1f22;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-ring: #ffc93c;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @layer base {
+  html {
+    color-scheme: dark;
+  }
+
   html,
   body,
   #root {
@@ -34,12 +64,195 @@
 
   body {
     background-color: var(--color-background);
+    background-image:
+      radial-gradient(1100px 520px at 100% -8%, rgba(255, 201, 60, 0.07), transparent 62%),
+      radial-gradient(900px 480px at -10% 0%, rgba(217, 218, 220, 0.045), transparent 58%);
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
   * {
     border-color: var(--color-border);
+  }
+
+  ::selection {
+    background: rgba(255, 201, 60, 0.3);
+    color: #f8fafc;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-deep);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #4a4d54;
+    border: 2px solid var(--color-deep);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5c6068;
+  }
+
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@layer utilities {
+  .animate-fade-up {
+    animation: fade-up 0.55s var(--ease-smooth) both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out both;
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.28s var(--ease-smooth) both;
+  }
+
+  .animate-float-slow {
+    animation: float-slow 7s ease-in-out infinite;
+  }
+
+  /* Entrada escalonada para grids y filas de KPIs. */
+  .stagger > * {
+    animation: fade-up 0.55s var(--ease-smooth) both;
+  }
+  .stagger > *:nth-child(1) {
+    animation-delay: 30ms;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: 70ms;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 110ms;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 150ms;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 190ms;
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: 230ms;
+  }
+  .stagger > *:nth-child(7) {
+    animation-delay: 270ms;
+  }
+  .stagger > *:nth-child(8) {
+    animation-delay: 310ms;
+  }
+  .stagger > *:nth-child(9) {
+    animation-delay: 350ms;
+  }
+  .stagger > *:nth-child(10) {
+    animation-delay: 390ms;
+  }
+  .stagger > *:nth-child(11) {
+    animation-delay: 430ms;
+  }
+  .stagger > *:nth-child(12) {
+    animation-delay: 470ms;
+  }
+
+  .card-hover {
+    transition:
+      transform 0.35s var(--ease-smooth),
+      box-shadow 0.35s var(--ease-smooth),
+      border-color 0.35s var(--ease-smooth),
+      background-color 0.35s var(--ease-smooth);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+    border-color: rgba(217, 218, 220, 0.24);
+    box-shadow: 0 28px 60px -34px rgba(0, 0, 0, 0.95);
+  }
+
+  .glow-primary {
+    box-shadow: 0 14px 44px -20px rgba(255, 201, 60, 0.55);
+  }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(217, 218, 220, 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(217, 218, 220, 0.055) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

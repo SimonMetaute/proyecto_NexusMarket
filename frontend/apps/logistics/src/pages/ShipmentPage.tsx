@@ -82,11 +82,15 @@ export function ShipmentPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <label htmlFor="shipmentId" className="text-sm font-medium">
+            <label
+              htmlFor="shipmentId"
+              className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+            >
               Shipment ID
             </label>
             <Input
               id="shipmentId"
+              className="font-mono text-xs"
               value={shipmentId}
               onChange={(event) => setShipmentId(event.target.value)}
               placeholder="UUID del envío"
@@ -106,7 +110,7 @@ export function ShipmentPage() {
             </Alert>
           ) : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               loading={dispatch.isPending}
               disabled={shipmentId.trim().length === 0}

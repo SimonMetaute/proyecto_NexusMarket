@@ -11,6 +11,7 @@ import {
   ErrorState,
   PageHeader,
   Skeleton,
+  StatCard,
   Table,
   TableBody,
   TableCell,
@@ -25,8 +26,15 @@ import {
   listSellerOrders,
   statusVariant,
 } from '@nexus/shared';
-import { Package, RotateCcw, ShoppingBag, TrendingUp, Warehouse } from 'lucide-react';
-import type { ReactNode } from 'react';
+import {
+  ArrowRight,
+  Package,
+  RotateCcw,
+  ShieldCheck,
+  ShoppingBag,
+  TrendingUp,
+  Warehouse,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function DashboardPage() {
@@ -63,7 +71,7 @@ export function DashboardPage() {
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
+          {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="h-28 w-full" />
           ))}
         </div>
@@ -102,6 +110,19 @@ export function DashboardPage() {
       <PageHeader
         title={profile !== undefined ? profile.commercialName : 'Dashboard'}
         description="Resumen operativo construido sólo con respuestas del backend."
+        actions={
+          <>
+            {profile !== undefined ? (
+              <Badge variant={statusVariant(profile.verificationStatus)}>
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {profile.verificationStatus}
+              </Badge>
+            ) : null}
+            <Link to="/products/new">
+              <Button size="sm">Crear producto</Button>
+            </Link>
+          </>
+        }
       />
 
       {profile !== undefined && profile.verificationStatus !== 'Verified' ? (
@@ -111,58 +132,90 @@ export function DashboardPage() {
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          icon={<ShoppingBag className="h-4 w-4" />}
+      <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          icon={ShoppingBag}
           label="Órdenes totales"
           value={String(dashboard?.totalOrders ?? 0)}
+          hint="Órdenes que incluyen tus productos"
+          tone="primary"
         />
-        <MetricCard
-          icon={<TrendingUp className="h-4 w-4" />}
+        <StatCard
+          icon={TrendingUp}
           label="Ventas totales"
           value={formatMoney(dashboard?.totalSales ?? 0)}
+          hint="Facturación agregada"
+          tone="success"
         />
-        <MetricCard
-          icon={<Package className="h-4 w-4" />}
+        <StatCard
+          icon={Package}
           label="Productos publicados"
           value={`${dashboard?.publishedProducts ?? 0} / ${dashboard?.totalProducts ?? 0}`}
+          hint="Publicados sobre el total"
+          tone="info"
         />
-        <MetricCard
-          icon={<Warehouse className="h-4 w-4" />}
+        <StatCard
+          icon={Warehouse}
           label="Stock total"
           value={String(dashboard?.totalStock ?? 0)}
+          hint="Unidades disponibles"
+          tone="warning"
         />
-        <MetricCard
-          icon={<ShoppingBag className="h-4 w-4" />}
+        <StatCard
+          icon={ShoppingBag}
           label="Órdenes activas"
           value={String(dashboard?.activeOrders ?? 0)}
+          hint="En curso ahora mismo"
+          tone="primary"
         />
-        <MetricCard
-          icon={<RotateCcw className="h-4 w-4" />}
+        <StatCard
+          icon={RotateCcw}
           label="Devoluciones pendientes"
           value={String(dashboard?.pendingReturns ?? 0)}
+          hint="Requieren seguimiento"
+          tone="danger"
         />
-        <MetricCard
-          icon={<Package className="h-4 w-4" />}
+        <StatCard
+          icon={Warehouse}
           label="Registros de inventario"
           value={String(inventory.length)}
+          hint="Filas devueltas por /inventory"
+          tone="neutral"
         />
-        <MetricCard
-          icon={<Package className="h-4 w-4" />}
+        <StatCard
+          icon={ShieldCheck}
           label="Verificación"
-          value={dashboard?.verificationStatus ?? profile?.verificationStatus ?? '—'}
+          value={
+            <span className="text-lg">
+              {dashboard?.verificationStatus ??
+                profile?.verificationStatus ??
+                '—'}
+            </span>
+          }
+          hint="Estado de la cuenta de vendedor"
+          tone={
+            (dashboard?.verificationStatus ??
+              profile?.verificationStatus) === 'Verified'
+              ? 'success'
+              : 'warning'
+          }
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Órdenes recientes</CardTitle>
+            <div>
+              <CardTitle>Órdenes recientes</CardTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Últimos movimientos con tus productos
+              </p>
+            </div>
             <Link
               to="/orders"
-              className="text-sm font-medium text-accent-foreground hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:text-primary-hover"
             >
-              Ver todas
+              Ver todas <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </CardHeader>
           <CardContent>
@@ -184,16 +237,18 @@ export function DashboardPage() {
                 <TableBody>
                   {orders.slice(0, 5).map((order) => (
                     <TableRow key={order.orderId}>
-                      <TableCell className="font-mono text-xs">
-                        {order.orderId}
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        #{order.orderId.slice(0, 8)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(order.orderStatus)}>
                           {order.orderStatus}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatMoney(order.total)}</TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="font-semibold text-primary tabular-nums">
+                        {formatMoney(order.total)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground tabular-nums">
                         {formatDate(order.creationDate)}
                       </TableCell>
                     </TableRow>
@@ -211,7 +266,10 @@ export function DashboardPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
               <Link to="/products/new">
-                <Button className="w-full">Crear producto</Button>
+                <Button className="w-full">
+                  Crear producto
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
               </Link>
               <Link to="/inventory">
                 <Button variant="outline" className="w-full">
@@ -229,30 +287,11 @@ export function DashboardPage() {
           <Alert variant="info" title="Métricas del backend">
             Los KPIs provienen de <code>GET /seller/dashboard</code> (agregaciones
             reales de órdenes, productos, stock y devoluciones). La tienda y las
-            liquidaciones no existen en el contrato actual.
+            liquidaciones se consultan por separado en <code>/seller/store</code> y{' '}
+            <code>/seller/settlements</code>.
           </Alert>
         </div>
       </div>
-    </div>
-  );
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
     </div>
   );
 }

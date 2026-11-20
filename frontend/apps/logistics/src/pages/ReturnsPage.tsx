@@ -5,16 +5,16 @@ import {
   Button,
   EmptyState,
   ErrorState,
-  FormField,
   PageHeader,
-  Select,
   Skeleton,
+  StatCard,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  cn,
   formatDate,
   formatMoney,
   listLogisticsReturns,
@@ -23,7 +23,7 @@ import {
   toApiError,
 } from '@nexus/shared';
 import type { ReturnFilters } from '@nexus/shared';
-import { RotateCcw } from 'lucide-react';
+import { Clock, PackageCheck, RotateCcw, Wallet } from 'lucide-react';
 import { useState } from 'react';
 
 const RETURN_STATUSES = [
@@ -64,6 +64,18 @@ export function ReturnsPage() {
   });
 
   const returns = returnsQuery.data ?? [];
+  const completed = returns.filter(
+    (returnCase) => returnCase.returnStatus === 'Completed',
+  ).length;
+  const pending = returns.filter(
+    (returnCase) =>
+      returnCase.returnStatus !== 'Completed' &&
+      returnCase.returnStatus !== 'Rejected',
+  ).length;
+  const refundTotal = returns.reduce(
+    (sum, returnCase) => sum + returnCase.refundAmount,
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -75,24 +87,62 @@ export function ReturnsPage() {
       {message !== null ? <Alert variant="success">{message}</Alert> : null}
       {error !== null ? <Alert variant="error">{error}</Alert> : null}
 
-      <FormField label="Estado" htmlFor="returnStatusFilter">
-        <Select
-          id="returnStatusFilter"
-          value={filters.status ?? ''}
-          onChange={(event) =>
-            setFilters((current) => ({
-              ...current,
-              status: event.target.value === '' ? undefined : event.target.value,
-            }))
-          }
-        >
-          {RETURN_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {status === '' ? 'Todos' : status}
-            </option>
-          ))}
-        </Select>
-      </FormField>
+      <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          icon={RotateCcw}
+          label="En vista"
+          value={returns.length}
+          hint="Según el filtro actual"
+          tone="primary"
+        />
+        <StatCard
+          icon={Clock}
+          label="Pendientes"
+          value={pending}
+          hint="Sin recepción física"
+          tone="warning"
+        />
+        <StatCard
+          icon={PackageCheck}
+          label="Completadas"
+          value={completed}
+          hint="Recepción registrada"
+          tone="success"
+        />
+        <StatCard
+          icon={Wallet}
+          label="Reembolso acumulado"
+          value={formatMoney(refundTotal)}
+          hint="Suma devuelta por el backend"
+          tone="info"
+        />
+      </div>
+
+      <div className="scrollbar-none flex gap-2 overflow-x-auto rounded-2xl border border-[#D9DADC]/10 bg-card p-3">
+        {RETURN_STATUSES.map((status) => {
+          const active = (filters.status ?? '') === status;
+          return (
+            <button
+              key={status.length === 0 ? 'all' : status}
+              type="button"
+              onClick={() =>
+                setFilters((current) => ({
+                  ...current,
+                  status: status === '' ? undefined : status,
+                }))
+              }
+              className={cn(
+                'shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors',
+                active
+                  ? 'border-primary/40 bg-primary/15 text-primary'
+                  : 'border-[#D9DADC]/12 bg-white/[0.03] text-muted-foreground hover:border-[#D9DADC]/25 hover:text-foreground',
+              )}
+            >
+              {status === '' ? 'Todas' : status}
+            </button>
+          );
+        })}
+      </div>
 
       {returnsQuery.isLoading ? (
         <div className="space-y-3">
@@ -133,11 +183,11 @@ export function ReturnsPage() {
           <TableBody>
             {returns.map((returnCase) => (
               <TableRow key={returnCase.returnId}>
-                <TableCell className="font-mono text-xs">
-                  {returnCase.returnId}
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  #{returnCase.returnId.slice(0, 8)}
                 </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {returnCase.orderId}
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  #{returnCase.orderId.slice(0, 8)}
                 </TableCell>
                 <TableCell>{returnCase.reason}</TableCell>
                 <TableCell>
@@ -148,7 +198,9 @@ export function ReturnsPage() {
                 <TableCell className="text-muted-foreground">
                   {formatDate(returnCase.requestDate)}
                 </TableCell>
-                <TableCell>{formatMoney(returnCase.refundAmount)}</TableCell>
+                <TableCell className="font-semibold text-primary tabular-nums">
+                  {formatMoney(returnCase.refundAmount)}
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatDate(returnCase.receivedDate)}
                 </TableCell>

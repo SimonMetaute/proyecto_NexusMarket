@@ -9,12 +9,14 @@ import {
   PageHeader,
   Select,
   Skeleton,
+  StatCard,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  cn,
   confirmDelivery,
   dispatchShipment,
   formatDate,
@@ -24,7 +26,7 @@ import {
   toApiError,
 } from '@nexus/shared';
 import type { ShipmentFilters } from '@nexus/shared';
-import { PackageCheck, Truck } from 'lucide-react';
+import { CheckCircle2, Clock, PackageCheck, Truck } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -85,6 +87,17 @@ export function DispatchQueuePage() {
   });
 
   const shipments = shipmentsQuery.data ?? [];
+  const pendingDispatch = shipments.filter(
+    (shipment) =>
+      shipment.shipmentStatus === 'Scheduled' ||
+      shipment.shipmentStatus === 'InPreparation',
+  ).length;
+  const inTransit = shipments.filter(
+    (shipment) => shipment.shipmentStatus === 'InTransit',
+  ).length;
+  const delivered = shipments.filter(
+    (shipment) => shipment.shipmentStatus === 'Delivered',
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -96,45 +109,85 @@ export function DispatchQueuePage() {
       {message !== null ? <Alert variant="success">{message}</Alert> : null}
       {error !== null ? <Alert variant="error">{error}</Alert> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormField label="Estado del envío" htmlFor="statusFilter">
-          <Select
-            id="statusFilter"
-            value={filters.status ?? ''}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                status: event.target.value === '' ? undefined : event.target.value,
-              }))
-            }
-          >
-            {SHIPMENT_STATUSES.map((status) => (
-              <option key={status} value={status}>
+      <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          icon={Truck}
+          label="Envíos en vista"
+          value={shipments.length}
+          hint="Según los filtros actuales"
+          tone="primary"
+        />
+        <StatCard
+          icon={Clock}
+          label="Por despachar"
+          value={pendingDispatch}
+          hint="Scheduled + InPreparation"
+          tone="warning"
+        />
+        <StatCard
+          icon={PackageCheck}
+          label="En tránsito"
+          value={inTransit}
+          hint="InTransit"
+          tone="info"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Entregados"
+          value={delivered}
+          hint="Delivered"
+          tone="success"
+        />
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-[#D9DADC]/10 bg-card p-4">
+        <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1">
+          {SHIPMENT_STATUSES.map((status) => {
+            const active = (filters.status ?? '') === status;
+            return (
+              <button
+                key={status.length === 0 ? 'all' : status}
+                type="button"
+                onClick={() =>
+                  setFilters((current) => ({
+                    ...current,
+                    status: status === '' ? undefined : status,
+                  }))
+                }
+                className={cn(
+                  'shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors',
+                  active
+                    ? 'border-primary/40 bg-primary/15 text-primary'
+                    : 'border-[#D9DADC]/12 bg-white/[0.03] text-muted-foreground hover:border-[#D9DADC]/25 hover:text-foreground',
+                )}
+              >
                 {status === '' ? 'Todos' : status}
-              </option>
-            ))}
-          </Select>
-        </FormField>
-        <FormField label="Bodega" htmlFor="warehouseFilter">
-          <Select
-            id="warehouseFilter"
-            value={filters.warehouseId ?? ''}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                warehouseId:
-                  event.target.value === '' ? undefined : event.target.value,
-              }))
-            }
-          >
-            <option value="">Todas</option>
-            {(warehousesQuery.data ?? []).map((warehouse) => (
-              <option key={warehouse.warehouseId} value={warehouse.warehouseId}>
-                {warehouse.name}
-              </option>
-            ))}
-          </Select>
-        </FormField>
+              </button>
+            );
+          })}
+        </div>
+        <div className="max-w-xs">
+          <FormField label="Bodega" htmlFor="warehouseFilter">
+            <Select
+              id="warehouseFilter"
+              value={filters.warehouseId ?? ''}
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  warehouseId:
+                    event.target.value === '' ? undefined : event.target.value,
+                }))
+              }
+            >
+              <option value="">Todas</option>
+              {(warehousesQuery.data ?? []).map((warehouse) => (
+                <option key={warehouse.warehouseId} value={warehouse.warehouseId}>
+                  {warehouse.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
       </div>
 
       {shipmentsQuery.isLoading ? (

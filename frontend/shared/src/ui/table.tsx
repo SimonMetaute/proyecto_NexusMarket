@@ -6,8 +6,11 @@ export function Table({
   ...props
 }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-border bg-card">
-      <table className={cn('w-full caption-bottom text-sm', className)} {...props} />
+    <div className="w-full overflow-x-auto rounded-2xl border border-[#D9DADC]/10 bg-card shadow-[0_18px_40px_-30px_rgba(0,0,0,0.9)]">
+      <table
+        className={cn('w-full caption-bottom text-sm tabular-nums', className)}
+        {...props}
+      />
     </div>
   );
 }
@@ -16,21 +19,42 @@ export function TableHeader({
   className,
   ...props
 }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn('bg-muted/60', className)} {...props} />;
+  return (
+    <thead
+      className={cn(
+        'border-b border-[#D9DADC]/10 bg-white/[0.025] text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TableBody({
   className,
   ...props
 }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className={cn('divide-y divide-border', className)} {...props} />;
+  return (
+    <tbody
+      className={cn('divide-y divide-[#D9DADC]/[0.07]', className)}
+      {...props}
+    />
+  );
 }
 
 export function TableRow({
   className,
   ...props
 }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn('hover:bg-muted/40', className)} {...props} />;
+  return (
+    <tr
+      className={cn(
+        'transition-colors duration-200 hover:bg-white/[0.045]',
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TableHead({
@@ -40,7 +64,7 @@ export function TableHead({
   return (
     <th
       className={cn(
-        'h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+        'h-11 px-4 text-left align-middle text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground',
         className,
       )}
       {...props}
@@ -52,5 +76,10 @@ export function TableCell({
   className,
   ...props
 }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn('px-4 py-3 align-middle', className)} {...props} />;
+  return (
+    <td
+      className={cn('px-4 py-3.5 align-middle text-foreground/90', className)}
+      {...props}
+    />
+  );
 }

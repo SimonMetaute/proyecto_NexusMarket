@@ -6,6 +6,7 @@ import {
   ErrorState,
   PageHeader,
   Skeleton,
+  StatCard,
   Table,
   TableBody,
   TableCell,
@@ -17,7 +18,7 @@ import {
   listBuyerOrders,
   statusVariant,
 } from '@nexus/shared';
-import { PackageOpen } from 'lucide-react';
+import { ArrowUpRight, PackageOpen, Receipt, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function OrdersPage() {
@@ -25,6 +26,17 @@ export function OrdersPage() {
     queryKey: ['buyer', 'orders'],
     queryFn: listBuyerOrders,
   });
+
+  const orders = data ?? [];
+  const totalSpent = orders.reduce((total, order) => total + order.total, 0);
+  const latestDate = orders.reduce<string | undefined>((latest, order) => {
+    if (latest === undefined) {
+      return order.creationDate;
+    }
+    return Date.parse(order.creationDate) > Date.parse(latest)
+      ? order.creationDate
+      : latest;
+  }, undefined);
 
   return (
     <div className="space-y-6">
@@ -35,6 +47,7 @@ export function OrdersPage() {
 
       {isLoading ? (
         <div className="space-y-3">
+          <Skeleton className="h-24 w-full" />
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
@@ -43,9 +56,37 @@ export function OrdersPage() {
 
       {isError ? <ErrorState error={error} onRetry={() => void refetch()} /> : null}
 
-      {!isLoading && !isError && data !== undefined && data.length === 0 ? (
+      {!isLoading && !isError && orders.length > 0 ? (
+        <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            label="Órdenes registradas"
+            value={orders.length}
+            hint="Historial completo del comprador"
+            icon={ShoppingBag}
+            tone="primary"
+          />
+          <StatCard
+            label="Total histórico"
+            value={formatMoney(totalSpent)}
+            hint="Suma de los totales confirmados"
+            icon={Receipt}
+            tone="success"
+          />
+          <StatCard
+            label="Última orden"
+            value={
+              latestDate !== undefined ? formatDate(latestDate) : '—'
+            }
+            hint="Fecha del pedido más reciente"
+            icon={PackageOpen}
+            tone="info"
+          />
+        </div>
+      ) : null}
+
+      {!isLoading && !isError && orders.length === 0 ? (
         <EmptyState
-          icon={<PackageOpen className="h-10 w-10" />}
+          icon={<PackageOpen className="h-5 w-5" />}
           title="Aún no tienes órdenes"
           description="Cuando completes un checkout aprobado, tu pedido aparecerá aquí."
           action={
@@ -56,7 +97,7 @@ export function OrdersPage() {
         />
       ) : null}
 
-      {data !== undefined && data.length > 0 ? (
+      {orders.length > 0 ? (
         <Table>
           <TableHeader>
             <TableRow>
@@ -68,24 +109,29 @@ export function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((order) => (
+            {orders.map((order) => (
               <TableRow key={order.orderId}>
-                <TableCell className="font-mono text-xs">{order.orderId}</TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">
+                  #{order.orderId.slice(0, 10)}
+                </TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(order.orderStatus)}>
                     {order.orderStatus}
                   </Badge>
                 </TableCell>
-                <TableCell>{formatMoney(order.total)}</TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="font-semibold text-primary tabular-nums">
+                  {formatMoney(order.total)}
+                </TableCell>
+                <TableCell className="text-muted-foreground tabular-nums">
                   {formatDate(order.creationDate)}
                 </TableCell>
                 <TableCell className="text-right">
                   <Link
                     to={`/orders/${order.orderId}`}
-                    className="text-sm font-medium text-accent-foreground hover:underline"
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 hover:text-primary-hover"
                   >
                     Ver detalle
+                    <ArrowUpRight className="h-3.5 w-3.5" />
                   </Link>
                 </TableCell>
               </TableRow>

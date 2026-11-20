@@ -25,6 +25,8 @@ export {
   Textarea,
   inputClassName,
 } from './primitives';
+export { StatCard, type StatCardTone } from './stat-card';
+export { Stepper, type StepperStep } from './stepper';
 export { StorefrontShell } from './storefront-shell';
 export {
   Table,

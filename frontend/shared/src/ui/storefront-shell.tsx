@@ -1,5 +1,13 @@
-import { LogIn, LogOut, ShoppingBag, ShoppingCart, User } from 'lucide-react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import {
+  LogIn,
+  LogOut,
+  Search,
+  ShoppingBag,
+  ShoppingCart,
+  User,
+} from 'lucide-react';
+import { useState, type FormEvent } from 'react';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { Badge } from './badge';
 import { Button, buttonVariants } from './button';
@@ -8,19 +16,56 @@ import { cn } from '../lib/cn';
 export function StorefrontShell() {
   const { session, logout } = useAuth();
   const isBuyer = session?.user.role === 'BUYER';
+  const navigate = useNavigate();
+  const [term, setTerm] = useState('');
+
+  const onSearch = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const value = term.trim();
+    navigate(value.length > 0 ? `/?search=${encodeURIComponent(value)}` : '/');
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <ShoppingBag className="h-4 w-4" />
+      <header className="sticky top-0 z-30 border-b border-[#D9DADC]/10 bg-deep/85 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4">
+          <Link to="/" className="group flex shrink-0 items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_10px_30px_-14px_rgba(255,201,60,0.8)] transition-transform duration-300 ease-smooth group-hover:-rotate-6">
+              <ShoppingBag className="h-[18px] w-[18px]" />
             </span>
-            <span className="text-base font-semibold">NexusMarket</span>
+            <span className="hidden flex-col leading-none sm:flex">
+              <span className="text-base font-bold tracking-tight text-foreground">
+                NexusMarket
+              </span>
+              <span className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Marketplace
+              </span>
+            </span>
           </Link>
 
-          <nav className="ml-2 hidden items-center gap-1 sm:flex">
+          <form
+            onSubmit={onSearch}
+            role="search"
+            className="relative ml-1 hidden min-w-0 flex-1 md:block"
+          >
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
+              placeholder="Buscar productos, marcas y categorías…"
+              aria-label="Buscar en el catálogo"
+              className="h-11 w-full rounded-xl border border-[#D9DADC]/15 bg-white/[0.04] pl-11 pr-24 text-sm text-foreground placeholder:text-muted-foreground/80 transition-all duration-200 focus:border-primary/50 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-primary/15"
+            />
+            <button
+              type="submit"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary-hover"
+            >
+              Buscar
+            </button>
+          </form>
+
+          <nav className="ml-auto hidden items-center gap-1 lg:flex">
             <StoreLink to="/" label="Catálogo" end />
             {isBuyer ? (
               <>
@@ -30,7 +75,7 @@ export function StorefrontShell() {
             ) : null}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
             {session === null ? (
               <Link
                 to="/login"
@@ -40,22 +85,24 @@ export function StorefrontShell() {
               </Link>
             ) : (
               <>
-                <Badge variant="secondary" className="hidden sm:inline-flex">
+                <Badge variant="secondary" className="hidden xl:inline-flex">
                   {session.user.role}
                 </Badge>
                 <Link
                   to="/profile"
-                  className={buttonVariants({ size: 'sm', variant: 'ghost' })}
+                  className={cn(
+                    buttonVariants({ size: 'icon', variant: 'ghost' }),
+                    'rounded-full border border-[#D9DADC]/15 bg-white/[0.04]',
+                  )}
+                  aria-label="Mi perfil"
                 >
                   <User className="h-4 w-4" />
-                  <span className="max-w-32 truncate">
-                    {session.user.username}
-                  </span>
                 </Link>
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="ghost"
                   aria-label="Cerrar sesión"
+                  className="hidden sm:inline-flex"
                   onClick={() => void logout()}
                 >
                   <LogOut className="h-4 w-4" />
@@ -64,15 +111,35 @@ export function StorefrontShell() {
             )}
             <Link
               to="/cart"
-              className={buttonVariants({ size: 'sm', variant: 'outline' })}
+              className={cn(
+                buttonVariants({ size: 'sm', variant: 'outline' }),
+                'group gap-2 border-[#D9DADC]/20',
+              )}
             >
-              <ShoppingCart className="h-4 w-4" /> Carrito
+              <ShoppingCart className="h-4 w-4 text-primary transition-transform duration-300 ease-smooth group-hover:-translate-y-0.5 group-hover:scale-110" />
+              <span className="hidden sm:inline">Carrito</span>
             </Link>
           </div>
         </div>
 
+        <div className="md:hidden">
+          <form onSubmit={onSearch} role="search" className="px-4 pb-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                placeholder="Buscar en NexusMarket…"
+                aria-label="Buscar en el catálogo"
+                className="h-10 w-full rounded-xl border border-[#D9DADC]/15 bg-white/[0.04] pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/15"
+              />
+            </div>
+          </form>
+        </div>
+
         {isBuyer ? (
-          <nav className="flex gap-1 overflow-x-auto border-t border-border px-4 py-2 sm:hidden">
+          <nav className="scrollbar-none flex gap-1 overflow-x-auto border-t border-[#D9DADC]/10 px-4 py-2 lg:hidden">
             <StoreLink to="/" label="Catálogo" end />
             <StoreLink to="/orders" label="Mis órdenes" />
             <StoreLink to="/profile" label="Perfil" />
@@ -80,14 +147,16 @@ export function StorefrontShell() {
         ) : null}
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:py-8">
         <Outlet />
       </main>
 
-      <footer className="border-t border-border bg-card">
-        <div className="mx-auto w-full max-w-6xl px-4 py-4 text-xs text-muted-foreground">
-          NexusMarket · Buyer Storefront (puerto 5173) · API
-          http://localhost:3000/api/v1
+      <footer className="border-t border-[#D9DADC]/10 bg-deep/60">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>NexusMarket · Buyer Storefront (puerto 5173)</span>
+          <span className="font-mono tabular-nums">
+            API http://localhost:3000/api/v1
+          </span>
         </div>
       </footer>
     </div>
@@ -109,14 +178,21 @@ function StoreLink({
       end={end}
       className={({ isActive }) =>
         cn(
-          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          'relative rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200',
           isActive
-            ? 'bg-muted text-foreground'
+            ? 'text-foreground'
             : 'text-muted-foreground hover:text-foreground',
         )
       }
     >
-      {label}
+      {({ isActive }) => (
+        <>
+          {label}
+          {isActive ? (
+            <span className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-primary" />
+          ) : null}
+        </>
+      )}
     </NavLink>
   );
 }
