@@ -24,7 +24,7 @@ import {
 import type { CreateProductResponse, ProductImage } from '@nexus/shared';
 import { ArrowLeft, CheckCircle2, ImagePlus, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const CATEGORIES = [
   'Electronics',
@@ -226,6 +226,7 @@ function CreatedProductPanel({
   onError: (message: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [variant, setVariant] = useState({
     attribute: '',
     value: '',
@@ -255,6 +256,7 @@ function CreatedProductPanel({
       setPublished(true);
       onMessage(`Producto publicado: ${response.status}. ${response.message}`);
       void refresh();
+      navigate('/products');
     },
     onError: (caught) => onError(toApiError(caught).message),
   });
