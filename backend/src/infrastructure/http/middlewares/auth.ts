@@ -52,6 +52,10 @@ export function createAuthMiddleware(dependencies: AuthMiddlewareDependencies): 
         throw ApiError.authenticationRequired('The authenticated user no longer exists');
       }
 
+      if (user.status === 'Inactive' || user.status === 'Blocked') {
+        throw ApiError.forbidden('Your account is not active');
+      }
+
       req.user = user;
       req.authClaims = claims;
       next();

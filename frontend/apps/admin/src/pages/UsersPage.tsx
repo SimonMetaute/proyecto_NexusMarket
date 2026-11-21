@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
   approveSeller,
+  changeUserStatus,
   formatDate,
   listAdminUsers,
   rejectSeller,
@@ -81,6 +82,20 @@ export function UsersPage() {
       setMessage(
         `Vendedor ${response.sellerId} → ${response.verificationStatus}.`,
       );
+      void invalidate();
+    },
+    onError: (caught) => {
+      setMessage(null);
+      setError(toApiError(caught).message);
+    },
+  });
+
+  const changeStatus = useMutation({
+    mutationFn: (input: { userId: string; status: 'Active' | 'Inactive' | 'Blocked' }) =>
+      changeUserStatus(input.userId, input.status),
+    onSuccess: (response) => {
+      setError(null);
+      setMessage(`Usuario ${response.userId} → ${response.status}.`);
       void invalidate();
     },
     onError: (caught) => {
@@ -224,6 +239,7 @@ export function UsersPage() {
               <TableHead>Email</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Estado</TableHead>
+              <TableHead>Cambiar estado</TableHead>
               <TableHead>Registro</TableHead>
             </TableRow>
           </TableHeader>
@@ -244,6 +260,26 @@ export function UsersPage() {
                 </TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(user.status)}>{user.status}</Badge>
+                </TableCell>
+                <TableCell>
+                  <Select
+                    value={user.status}
+                    disabled={changeStatus.isPending}
+                    onChange={(event) => {
+                      const next = event.target.value as
+                        | 'Active'
+                        | 'Inactive'
+                        | 'Blocked';
+                      if (next !== user.status) {
+                        changeStatus.mutate({ userId: user.userId, status: next });
+                      }
+                    }}
+                    className="h-8 w-32 text-xs"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Blocked">Blocked</option>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   {user.registrationDate !== undefined

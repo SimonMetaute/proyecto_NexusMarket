@@ -24,6 +24,15 @@ export function createAdminRoutes(
       adminController.consultUsers(req, res),
     ),
   );
+
+  router.patch(
+    '/admin/users/:id/status',
+    authMiddleware,
+    requireRole('ADMINISTRATOR'),
+    asyncHandler((req: Request, res: Response) =>
+      adminController.changeUserStatus(req, res),
+    ),
+  );
   router.post(
     '/admin/sellers/onboarding',
     authMiddleware,

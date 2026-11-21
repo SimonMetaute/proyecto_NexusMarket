@@ -16,6 +16,7 @@ import {
   requireEmail,
   requireEnum,
   requireObject,
+  optionalString,
   requireParam,
   requirePassword,
   requirePositiveInt,
@@ -104,6 +105,48 @@ export class AdministratorController {
         role: resolveUserRole(candidate.userType),
       })),
     );
+  }
+
+  async changeUserStatus(req: Request, res: Response): Promise<void> {
+    const user = this.requireUser(req);
+    const userId = requireParam(asString(req.params.id), 'id');
+    const body = requireObject(req.body);
+    const newStatus = requireEnum(body, 'status', [
+      'Active',
+      'Inactive',
+      'Blocked',
+    ] as const);
+    const reason = optionalString(body, 'reason', { maxLength: 500 });
+
+    if (userId === user.userId && newStatus !== 'Active') {
+      throw ApiError.forbidden('Cannot block or deactivate your own account');
+    }
+
+    const target = {
+      userId,
+      userType: 'BUYER',
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      phone: '',
+      identityDocument: { type: 'Citizenship Card', number: '' },
+      registrationDate: new Date(),
+      status: 'Active',
+      updateDate: new Date(),
+    } as any;
+
+    const updated = await this.administratorService.changeUserStatus(
+      user,
+      target,
+      newStatus,
+      reason,
+    );
+
+    res.status(200).json({
+      userId: updated.userId,
+      status: updated.status,
+    });
   }
 
   async onboardSeller(req: Request, res: Response): Promise<void> {

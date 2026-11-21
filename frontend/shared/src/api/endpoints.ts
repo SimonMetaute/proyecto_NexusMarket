@@ -382,6 +382,18 @@ export async function listAdminUsers(
   return data;
 }
 
+export async function changeUserStatus(
+  userId: string,
+  status: 'Active' | 'Inactive' | 'Blocked',
+  reason?: string,
+): Promise<{ userId: string; status: string }> {
+  const { data } = await http.patch<{ userId: string; status: string }>(
+    `/admin/users/${encodeURIComponent(userId)}/status`,
+    { status, ...(reason !== undefined ? { reason } : {}) },
+  );
+  return data;
+}
+
 export async function onboardSeller(
   payload: OnboardSellerRequest,
 ): Promise<OnboardSellerResponse> {

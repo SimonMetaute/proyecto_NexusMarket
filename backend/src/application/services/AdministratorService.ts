@@ -222,7 +222,19 @@ export class AdministratorService implements AdministratorPort {
     return found;
   }
 
-  async changeUserStatus(user: User, targetUser: User, newStatus: any): Promise<User> {
+  async changeUserStatus(
+    user: User,
+    targetUser: User,
+    newStatus: any,
+    reason?: string,
+  ): Promise<User> {
+    const allowed = ['Active', 'Inactive', 'Blocked'];
+    if (!allowed.includes(String(newStatus))) {
+      throw ApiError.invalidRequest(`Unknown status '${newStatus}'.`, { field: 'status' });
+    }
+    if (targetUser.userId === user.userId && String(newStatus) !== 'Active') {
+      throw ApiError.forbidden('Cannot block or deactivate your own account');
+    }
     const found = await this.userRepository.findById(targetUser.userId);
     if (!found) {
       throw ApiError.notFound(`User ${targetUser.userId} not found`);
@@ -241,6 +253,17 @@ export class AdministratorService implements AdministratorPort {
       updateDate: new Date(),
     } as any);
     await this.userRepository.save(updated);
+
+    await this.auditLogRepository.save(
+      new AuditLog({
+        id: globalThis.crypto.randomUUID(),
+        actorId: user.userId,
+        action: 'USER_STATUS_CHANGE',
+        timestamp: new Date(),
+        details: { userId: targetUser.userId, newStatus: String(newStatus), reason: reason ?? null },
+      }),
+    );
+
     return updated;
   }
 

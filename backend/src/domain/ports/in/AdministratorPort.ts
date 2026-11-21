@@ -162,7 +162,7 @@ export interface AdministratorPort {
   consultUsers(user: User, criteria: UserFilterCriteria): Promise<User[]>;
   onboardSeller(user: User, params: OnboardSellerParams): Promise<OnboardSellerResult>;
   consultUserDetails(user: User, targetUser: User): Promise<User>;
-  changeUserStatus(user: User, targetUser: User, newStatus: any): Promise<User>;
+  changeUserStatus(user: User, targetUser: User, newStatus: any, reason?: string): Promise<User>;
   changeUserRole(user: User, targetUser: User, newRole: any): Promise<User>;
   suspendUserAccess(user: User, targetUser: User, reason: string): Promise<void>;
   reactivateUserAccess(user: User, targetUser: User): Promise<void>;
