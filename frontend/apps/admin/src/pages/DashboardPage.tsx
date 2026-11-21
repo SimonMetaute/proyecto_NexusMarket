@@ -180,12 +180,12 @@ export function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" /> Salud del marketplace
+                  <Activity className="h-4 w-4 text-[#171717]/60" /> Salud del marketplace
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex items-center gap-4 text-sm">
                 <Badge variant="success">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-700" />
                   {healthQuery.data.status}
                 </Badge>
                 <span className="text-muted-foreground tabular-nums">

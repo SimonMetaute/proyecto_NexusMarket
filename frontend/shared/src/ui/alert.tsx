@@ -4,23 +4,23 @@ import { cn } from '../lib/cn';
 
 const styles = {
   info: {
-    wrapper: 'border-sky-400/25 bg-sky-400/[0.08] text-sky-100',
-    icon: 'text-sky-300',
+    wrapper: 'border-sky-600/25 bg-sky-600/[0.07] text-sky-900',
+    icon: 'text-sky-700',
     Icon: Info,
   },
   success: {
-    wrapper: 'border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-100',
-    icon: 'text-emerald-300',
+    wrapper: 'border-emerald-600/25 bg-emerald-600/[0.07] text-emerald-900',
+    icon: 'text-emerald-700',
     Icon: CheckCircle2,
   },
   warning: {
-    wrapper: 'border-amber-400/25 bg-amber-400/[0.08] text-amber-100',
-    icon: 'text-amber-300',
+    wrapper: 'border-amber-600/30 bg-amber-600/[0.08] text-amber-900',
+    icon: 'text-amber-700',
     Icon: AlertTriangle,
   },
   error: {
-    wrapper: 'border-red-400/30 bg-red-400/[0.08] text-red-100',
-    icon: 'text-red-300',
+    wrapper: 'border-red-600/25 bg-red-600/[0.07] text-red-900',
+    icon: 'text-red-700',
     Icon: OctagonAlert,
   },
 } as const;

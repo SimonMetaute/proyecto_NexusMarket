@@ -39,7 +39,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#171717]/50 p-4 backdrop-blur-sm animate-fade-in"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -52,7 +52,7 @@ export function Dialog({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          'max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#D9DADC]/12 bg-card p-6 shadow-[0_40px_90px_-40px_rgba(0,0,0,1)] animate-scale-in',
+          'max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-[0_36px_80px_-40px_rgba(23,23,23,0.45)] animate-scale-in',
           className,
         )}
       >
@@ -75,7 +75,7 @@ export function Dialog({
         </div>
         <div className="mt-5">{children}</div>
         {footer !== undefined ? (
-          <div className="mt-6 flex justify-end gap-2 border-t border-[#D9DADC]/10 pt-4">
+          <div className="mt-6 flex justify-end gap-2 border-t border-border pt-4">
             {footer}
           </div>
         ) : null}
@@ -105,7 +105,7 @@ export function FormField({
       </label>
       {children}
       {error !== undefined ? (
-        <p className="text-xs text-red-300">{error}</p>
+        <p className="text-xs text-red-700">{error}</p>
       ) : null}
     </div>
   );

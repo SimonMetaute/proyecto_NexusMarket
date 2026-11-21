@@ -53,50 +53,52 @@ export function LoginPage({
 
   return (
     <div className="flex min-h-screen items-stretch bg-background">
-      <aside className="relative hidden w-[46%] flex-col justify-between overflow-hidden border-r border-[#D9DADC]/10 bg-deep p-10 lg:flex xl:p-14">
-        <div className="hero-grid pointer-events-none absolute inset-0 opacity-60" />
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-primary/[0.07] blur-3xl" />
+      <aside className="relative hidden w-[46%] flex-col justify-between overflow-hidden border-r border-[#f7f6f2]/10 bg-deep p-10 lg:flex xl:p-14">
+        <div className="hero-grid pointer-events-none absolute inset-0 opacity-[0.12]" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
 
         <div className="relative flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_14px_40px_-18px_rgba(255,201,60,0.9)]">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_14px_34px_-18px_rgba(232,90,36,0.9)]">
             <ShoppingBag className="h-5 w-5" />
           </span>
           <div className="leading-tight">
-            <p className="text-base font-bold tracking-tight">NexusMarket</p>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-base font-bold tracking-tight text-on-deep">
+              NexusMarket
+            </p>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-on-deep-muted">
               {portal.name}
             </p>
           </div>
         </div>
 
         <div className="relative max-w-md space-y-5">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.12] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
             <Sparkles className="h-3.5 w-3.5" /> Operación en tiempo real
           </span>
-          <h2 className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-foreground xl:text-[2.75rem]">
+          <h2 className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-on-deep xl:text-[2.75rem]">
             Todo tu marketplace,
             <br />
             <span className="text-primary">en un solo lugar.</span>
           </h2>
-          <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-sm text-sm leading-relaxed text-on-deep-muted">
             Catálogo, órdenes, envíos y auditoría sobre la misma API. Ingresa con
             tu cuenta para continuar en {portal.name}.
           </p>
         </div>
 
         <div className="relative grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl border border-[#D9DADC]/10 bg-white/[0.03] p-3">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="rounded-xl border border-[#f7f6f2]/10 bg-[#f7f6f2]/[0.04] p-3">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-on-deep-muted">
               Portal
             </p>
-            <p className="mt-1 font-semibold text-foreground">{portal.name}</p>
+            <p className="mt-1 font-semibold text-on-deep">{portal.name}</p>
           </div>
-          <div className="rounded-xl border border-[#D9DADC]/10 bg-white/[0.03] p-3">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="rounded-xl border border-[#f7f6f2]/10 bg-[#f7f6f2]/[0.04] p-3">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-on-deep-muted">
               Puerto
             </p>
-            <p className="mt-1 font-semibold text-foreground tabular-nums">
+            <p className="mt-1 font-semibold text-on-deep tabular-nums">
               {portal.port}
             </p>
           </div>
@@ -106,7 +108,7 @@ export function LoginPage({
       <div className="flex flex-1 items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm animate-fade-up">
           <div className="mb-7 flex flex-col items-center gap-3 text-center lg:items-start lg:text-left">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_16px_40px_-18px_rgba(255,201,60,0.9)] lg:hidden">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_16px_34px_-18px_rgba(232,90,36,0.9)] lg:hidden">
               <ShoppingBag className="h-6 w-6" />
             </div>
             <div>
@@ -119,7 +121,7 @@ export function LoginPage({
             </div>
           </div>
 
-          <Card className="border-[#D9DADC]/12">
+          <Card className="border-border">
             <CardContent className="pt-6">
               <form
                 className="space-y-4"
@@ -166,7 +168,7 @@ export function LoginPage({
                 <p className="mt-5 text-center text-sm text-muted-foreground">
                   ¿No tienes cuenta?{' '}
                   <Link
-                    className="font-semibold text-primary hover:text-primary-hover"
+                    className="font-semibold text-accent-foreground hover:text-accent-foreground-hover"
                     to="/register"
                   >
                     Regístrate

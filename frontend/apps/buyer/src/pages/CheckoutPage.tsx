@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   ApiError,
@@ -87,7 +87,7 @@ export function CheckoutPage() {
     if (selectedAddress === undefined || selectedPayment === undefined) {
       setOutcome({
         kind: 'rejected',
-        message: 'Selecciona una dirección de entrega y un método de pago.',
+        message: 'Selecciona una direcci�n de entrega y un m�todo de pago.',
       });
       return;
     }
@@ -103,14 +103,14 @@ export function CheckoutPage() {
   if (outcome?.kind === 'approved') {
     return (
       <div className="mx-auto max-w-xl space-y-5 animate-scale-in">
-        <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.08] p-8 text-center">
-          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-300" />
-          <h1 className="mt-3 text-xl font-bold tracking-tight text-emerald-100">
+        <div className="rounded-2xl border border-emerald-600/25 bg-emerald-600/[0.08] p-8 text-center">
+          <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-700" />
+          <h1 className="mt-3 text-xl font-bold tracking-tight text-emerald-900">
             Pago aprobado
           </h1>
-          <p className="mt-1 text-sm text-emerald-100/70">
-            El servidor confirmó la orden. Este es el único estado que se declara como
-            éxito.
+          <p className="mt-1 text-sm text-emerald-900/70">
+            El servidor confirm� la orden. Este es el �nico estado que se declara como
+            �xito.
           </p>
         </div>
 
@@ -127,9 +127,9 @@ export function CheckoutPage() {
               <span className="text-muted-foreground">Estado</span>
               <span className="font-medium">{outcome.order.orderStatus}</span>
             </div>
-            <div className="flex justify-between border-t border-[#D9DADC]/10 pt-2 text-base font-semibold">
+            <div className="flex justify-between border-t border-[#171717]/10 pt-2 text-base font-semibold">
               <span>Total</span>
-              <span className="text-primary tabular-nums">
+              <span className="text-accent-foreground tabular-nums">
                 {formatMoney(outcome.order.total)}
               </span>
             </div>
@@ -170,7 +170,7 @@ export function CheckoutPage() {
             description="Agrega productos antes de iniciar el checkout."
             action={
               <Link to="/">
-                <Button>Ir al catálogo</Button>
+                <Button>Ir al cat�logo</Button>
               </Link>
             }
           />
@@ -195,11 +195,11 @@ export function CheckoutPage() {
         <PageHeader title="Checkout" />
         <EmptyState
           icon={<ShoppingCart className="h-10 w-10" />}
-          title="Tu carrito está vacío"
+          title="Tu carrito est� vac�o"
           description="Agrega productos antes de confirmar una orden."
           action={
             <Link to="/">
-              <Button>Ir al catálogo</Button>
+              <Button>Ir al cat�logo</Button>
             </Link>
           }
         />
@@ -221,7 +221,7 @@ export function CheckoutPage() {
         <Alert variant="error" title="Pago rechazado">
           {outcome.message}{' '}
           <span className="block text-xs">
-            Puedes revisar los datos y reintentar. No se declaró ninguna orden.
+            Puedes revisar los datos y reintentar. No se declar� ninguna orden.
           </span>
         </Alert>
       ) : null}
@@ -230,14 +230,14 @@ export function CheckoutPage() {
         <Alert variant="warning" title="Resultado desconocido">
           {outcome.message}{' '}
           <span className="block text-xs">
-            El servidor no confirmó la orden. Verifica tu historial antes de reintentar:
-            no se declara éxito sin una respuesta 201.
+            El servidor no confirm� la orden. Verifica tu historial antes de reintentar:
+            no se declara �xito sin una respuesta 201.
           </span>
           <Link
             to="/orders"
-            className="mt-2 inline-block font-semibold text-primary underline"
+            className="mt-2 inline-block font-semibold text-accent-foreground underline"
           >
-            Revisar mis órdenes
+            Revisar mis �rdenes
           </Link>
         </Alert>
       ) : null}
@@ -257,7 +257,7 @@ export function CheckoutPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" /> Dirección de entrega
+                <MapPin className="h-4 w-4" /> Direcci�n de entrega
               </CardTitle>
               <Button
                 type="button"
@@ -282,13 +282,13 @@ export function CheckoutPage() {
                     'flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors',
                     selectedAddress?.addressId === address.addressId
                       ? 'border-primary/40 bg-primary/[0.06]'
-                      : 'border-[#D9DADC]/12 hover:border-[#D9DADC]/25 hover:bg-white/[0.04]',
+                      : 'border-[#171717]/12 hover:border-[#171717]/25 hover:bg-[#171717]/[0.04]',
                   )}
                 >
                   <input
                     type="radio"
                     name="address"
-                    className="mt-1 accent-[#FFC93C]"
+                    className="mt-1 accent-[#E85A24]"
                     checked={selectedAddress?.addressId === address.addressId}
                     onChange={() => setSelectedAddressId(address.addressId)}
                   />
@@ -297,9 +297,9 @@ export function CheckoutPage() {
                       {address.address}, {address.city}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {address.department}, {address.country} · {address.postalCode}
+                      {address.department}, {address.country} � {address.postalCode}
                       {address.reference !== undefined && address.reference.length > 0
-                        ? ` · ${address.reference}`
+                        ? ` � ${address.reference}`
                         : ''}
                     </span>
                   </span>
@@ -311,7 +311,7 @@ export function CheckoutPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" /> Método de pago
+                <CreditCard className="h-4 w-4" /> M�todo de pago
               </CardTitle>
               <Button
                 type="button"
@@ -325,7 +325,7 @@ export function CheckoutPage() {
             <CardContent className="space-y-2">
               {!loadingOptions && payments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No tienes métodos de pago registrados. Agrega uno para continuar.
+                  No tienes m�todos de pago registrados. Agrega uno para continuar.
                 </p>
               ) : null}
               {payments.map((payment) => (
@@ -335,13 +335,13 @@ export function CheckoutPage() {
                     'flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors',
                     selectedPayment?.paymentMethodId === payment.paymentMethodId
                       ? 'border-primary/40 bg-primary/[0.06]'
-                      : 'border-[#D9DADC]/12 hover:border-[#D9DADC]/25 hover:bg-white/[0.04]',
+                      : 'border-[#171717]/12 hover:border-[#171717]/25 hover:bg-[#171717]/[0.04]',
                   )}
                 >
                   <input
                     type="radio"
                     name="payment"
-                    className="mt-1 accent-[#FFC93C]"
+                    className="mt-1 accent-[#E85A24]"
                     checked={selectedPayment?.paymentMethodId === payment.paymentMethodId}
                     onChange={() => setSelectedPaymentId(payment.paymentMethodId)}
                   />
@@ -350,7 +350,7 @@ export function CheckoutPage() {
                       {payment.brand} {payment.maskedNumber}
                     </span>
                     <span className="block text-xs text-muted-foreground">
-                      {payment.type} · vence {payment.expirationDate} ·{' '}
+                      {payment.type} � vence {payment.expirationDate} �{' '}
                       {payment.cardholder}
                     </span>
                   </span>
@@ -360,26 +360,26 @@ export function CheckoutPage() {
           </Card>
         </div>
 
-        <aside className="h-fit space-y-4 rounded-2xl border border-[#D9DADC]/12 bg-card p-5 lg:sticky lg:top-24">
+        <aside className="h-fit space-y-4 rounded-2xl border border-[#171717]/12 bg-card p-5 lg:sticky lg:top-24">
           <h2 className="text-base font-semibold tracking-tight">Resumen del pedido</h2>
           <ul className="space-y-2 text-sm">
             {cart.cartLines.map((line) => (
               <li key={line.cartLineId} className="flex justify-between gap-3">
                 <span className="text-muted-foreground">
-                  {line.quantity} × producto {line.productId.slice(0, 8)}…
+                  {line.quantity} � producto {line.productId.slice(0, 8)}�
                 </span>
                 <span className="tabular-nums">{formatMoney(line.subtotal)}</span>
               </li>
             ))}
           </ul>
-          <dl className="space-y-2 border-t border-[#D9DADC]/10 pt-3 text-sm">
+          <dl className="space-y-2 border-t border-[#171717]/10 pt-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
               <dd className="tabular-nums">{formatMoney(cart.subtotal)}</dd>
             </div>
             <div className="flex items-center justify-between text-base font-semibold">
               <dt>Total</dt>
-              <dd className="text-xl font-bold text-primary tabular-nums">
+              <dd className="text-xl font-bold text-accent-foreground tabular-nums">
                 {formatMoney(cart.total)}
               </dd>
             </div>

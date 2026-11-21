@@ -7,10 +7,7 @@ import { Button } from './button';
 export function Skeleton({ className }: { className?: string }) {
   return (
     <div
-      className={cn(
-        'animate-pulse rounded-xl bg-white/[0.06]',
-        className,
-      )}
+      className={cn('animate-pulse rounded-xl bg-[#171717]/[0.07]', className)}
       aria-hidden
     />
   );
@@ -59,11 +56,11 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#D9DADC]/15 bg-card/60 px-6 py-14 text-center',
+        'flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-6 py-14 text-center',
         className,
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-accent-foreground">
         {icon ?? <PackageOpen className="h-5 w-5" />}
       </div>
       <div className="space-y-1">
@@ -91,15 +88,15 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        'rounded-2xl border border-red-400/30 bg-red-400/[0.07] p-5 text-sm text-red-100',
+        'rounded-2xl border border-red-600/25 bg-red-600/[0.06] p-5 text-sm text-red-900',
         className,
       )}
     >
       <p className="font-semibold">
         {apiError.isDomainError ? 'Operación no permitida' : 'Ocurrió un error'}
       </p>
-      <p className="mt-1 text-red-100/80">{apiError.message}</p>
-      <p className="mt-2 font-mono text-xs text-red-300/80 tabular-nums">
+      <p className="mt-1 text-red-900/80">{apiError.message}</p>
+      <p className="mt-2 font-mono text-xs text-red-700 tabular-nums">
         {apiError.status > 0 ? `HTTP ${apiError.status} · ` : ''}
         {apiError.code}
         {apiError.requestId !== undefined

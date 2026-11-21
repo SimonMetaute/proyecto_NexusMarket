@@ -3,12 +3,12 @@ import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
 
 const TONES = {
-  primary: 'bg-primary/10 text-primary',
-  success: 'bg-emerald-400/10 text-emerald-300',
-  warning: 'bg-amber-400/10 text-amber-300',
-  danger: 'bg-red-400/10 text-red-300',
-  info: 'bg-sky-400/10 text-sky-300',
-  neutral: 'bg-white/[0.06] text-muted-foreground',
+  primary: 'bg-primary/10 text-accent-foreground',
+  success: 'bg-emerald-600/10 text-emerald-700',
+  warning: 'bg-amber-600/10 text-amber-700',
+  danger: 'bg-red-600/10 text-red-700',
+  info: 'bg-sky-600/10 text-sky-700',
+  neutral: 'bg-[#171717]/[0.06] text-muted-foreground',
 } as const;
 
 export type StatCardTone = keyof typeof TONES;
@@ -31,11 +31,11 @@ export function StatCard({
   return (
     <div
       className={cn(
-        'card-hover group relative overflow-hidden rounded-2xl border border-[#D9DADC]/10 bg-card p-5',
+        'card-hover group relative overflow-hidden rounded-2xl border border-border bg-card p-5',
         className,
       )}
     >
-      <span className="pointer-events-none absolute -right-10 -top-12 h-28 w-28 rounded-full bg-primary/[0.05] blur-2xl" />
+      <span className="pointer-events-none absolute -right-10 -top-12 h-28 w-28 rounded-full bg-primary/[0.06] blur-2xl" />
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">

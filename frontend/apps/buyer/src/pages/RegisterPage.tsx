@@ -61,7 +61,7 @@ export function RegisterPage() {
       <div className="pointer-events-none absolute -top-32 right-1/4 h-80 w-80 rounded-full bg-primary/[0.08] blur-3xl" />
       <div className="relative w-full max-w-lg animate-fade-up">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_16px_40px_-18px_rgba(255,201,60,0.9)]">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_16px_40px_-18px_rgba(232,90,36,0.9)]">
             <ShoppingBag className="h-6 w-6" />
           </span>
           <div>
@@ -170,7 +170,7 @@ export function RegisterPage() {
             {success === null ? (
               <p className="mt-4 text-center text-sm text-muted-foreground">
                 ¿Ya tienes cuenta?{' '}
-                <Link className="font-semibold text-primary hover:text-primary-hover" to="/login">
+                <Link className="font-semibold text-accent-foreground hover:text-accent-foreground-hover" to="/login">
                   Inicia sesión
                 </Link>
               </p>

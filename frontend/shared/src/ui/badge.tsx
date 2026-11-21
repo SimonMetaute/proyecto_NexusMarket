@@ -9,12 +9,12 @@ export const badgeVariants = cva(
       variant: {
         default: 'border-transparent bg-primary text-primary-foreground',
         secondary:
-          'border-transparent bg-white/[0.07] text-muted-foreground',
-        outline: 'border-[#D9DADC]/20 bg-transparent text-muted-foreground',
-        success: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
-        warning: 'border-amber-400/25 bg-amber-400/10 text-amber-300',
-        destructive: 'border-red-400/25 bg-red-400/10 text-red-300',
-        info: 'border-sky-400/25 bg-sky-400/10 text-sky-300',
+          'border-transparent bg-[#171717]/[0.07] text-muted-foreground',
+        outline: 'border-border bg-transparent text-muted-foreground',
+        success: 'border-emerald-600/25 bg-emerald-600/[0.09] text-emerald-700',
+        warning: 'border-amber-600/25 bg-amber-600/[0.09] text-amber-700',
+        destructive: 'border-red-600/20 bg-red-600/[0.08] text-red-700',
+        info: 'border-sky-600/25 bg-sky-600/[0.08] text-sky-700',
       },
     },
     defaultVariants: { variant: 'default' },

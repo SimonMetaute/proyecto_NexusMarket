@@ -6,7 +6,7 @@ export function Table({
   ...props
 }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="w-full overflow-x-auto rounded-2xl border border-[#D9DADC]/10 bg-card shadow-[0_18px_40px_-30px_rgba(0,0,0,0.9)]">
+    <div className="w-full overflow-x-auto rounded-2xl border border-border bg-card shadow-[0_18px_36px_-30px_rgba(23,23,23,0.25)]">
       <table
         className={cn('w-full caption-bottom text-sm tabular-nums', className)}
         {...props}
@@ -22,7 +22,7 @@ export function TableHeader({
   return (
     <thead
       className={cn(
-        'border-b border-[#D9DADC]/10 bg-white/[0.025] text-muted-foreground',
+        'border-b border-border bg-[#171717]/[0.03] text-muted-foreground',
         className,
       )}
       {...props}
@@ -36,7 +36,7 @@ export function TableBody({
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tbody
-      className={cn('divide-y divide-[#D9DADC]/[0.07]', className)}
+      className={cn('divide-y divide-[#171717]/[0.07]', className)}
       {...props}
     />
   );
@@ -49,7 +49,7 @@ export function TableRow({
   return (
     <tr
       className={cn(
-        'transition-colors duration-200 hover:bg-white/[0.045]',
+        'transition-colors duration-200 hover:bg-[#171717]/[0.035]',
         className,
       )}
       {...props}
@@ -64,7 +64,7 @@ export function TableHead({
   return (
     <th
       className={cn(
-        'h-11 px-4 text-left align-middle text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground',
+        'h-11 px-4 text-left align-middle text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle',
         className,
       )}
       {...props}

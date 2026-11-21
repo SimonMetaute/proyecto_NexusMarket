@@ -6,39 +6,49 @@
 @source "./**/*.{ts,tsx}";
 
 /*
- * NexusMarket design tokens (dark, high-contrast).
+ * NexusMarket design tokens — Kestrel palette.
+ * Bone/stone canvas, obsidian contrast surfaces, ember accent.
  * Every portal imports this file, so the identity is inherited automatically.
  */
 @theme {
-  --color-background: #2b2d31;
-  --color-deep: #1e1f22;
-  --color-sidebar: #1e1f22;
-  --color-card: #313338;
-  --color-card-foreground: #d9dadc;
-  --color-elevated: #383a40;
+  /* Canvas & surfaces */
+  --color-background: #f4f3ee;
+  --color-deep: #171717;
+  --color-panel: #222222;
+  --color-sidebar: #171717;
+  --color-card: #eceae2;
+  --color-card-foreground: #141414;
+  --color-elevated: #e8e5dc;
 
-  --color-foreground: #d9dadc;
-  --color-muted: #383a40;
-  --color-muted-foreground: #949ba4;
+  /* Text */
+  --color-foreground: #141414;
+  --color-muted: #e8e5dc;
+  --color-muted-foreground: #5c5b57;
+  --color-subtle: #7a7872;
+  --color-on-deep: #f7f6f2;
+  --color-on-deep-muted: #b9b6ae;
 
-  --color-border: #45474b;
-  --color-input: #4a4d54;
+  /* Lines */
+  --color-border: #dcd9d0;
+  --color-input: #dcd9d0;
 
-  --color-primary: #ffc93c;
-  --color-primary-hover: #ffd466;
-  --color-primary-foreground: #1e1f22;
+  /* Accent */
+  --color-primary: #e85a24;
+  --color-primary-hover: #cf4a18;
+  --color-primary-foreground: #171717;
+  --color-accent: rgba(232, 90, 36, 0.1);
+  --color-accent-foreground: #b34310;
+  --color-accent-foreground-hover: #8f350c;
 
-  --color-secondary: #3a3d44;
-  --color-secondary-foreground: #d9dadc;
+  --color-secondary: #e8e5dc;
+  --color-secondary-foreground: #141414;
 
-  --color-accent: rgba(255, 201, 60, 0.12);
-  --color-accent-foreground: #ffd466;
-
-  --color-destructive: #f87171;
-  --color-destructive-foreground: #1e1f22;
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
-  --color-ring: #ffc93c;
+  /* Semantic */
+  --color-destructive: #b42318;
+  --color-destructive-foreground: #f7f6f2;
+  --color-success: #1f7a4d;
+  --color-warning: #a8540c;
+  --color-ring: #e85a24;
 
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
@@ -53,7 +63,7 @@
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   html,
@@ -65,8 +75,8 @@
   body {
     background-color: var(--color-background);
     background-image:
-      radial-gradient(1100px 520px at 100% -8%, rgba(255, 201, 60, 0.07), transparent 62%),
-      radial-gradient(900px 480px at -10% 0%, rgba(217, 218, 220, 0.045), transparent 58%);
+      radial-gradient(1100px 520px at 100% -8%, rgba(232, 90, 36, 0.055), transparent 62%),
+      radial-gradient(900px 480px at -10% 0%, rgba(23, 23, 23, 0.035), transparent 58%);
     background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -79,8 +89,8 @@
   }
 
   ::selection {
-    background: rgba(255, 201, 60, 0.3);
-    color: #f8fafc;
+    background: rgba(232, 90, 36, 0.22);
+    color: #141414;
   }
 
   ::-webkit-scrollbar {
@@ -89,17 +99,17 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: var(--color-deep);
+    background: var(--color-card);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #4a4d54;
-    border: 2px solid var(--color-deep);
+    background: #dcd9d0;
+    border: 2px solid var(--color-card);
     border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #5c6068;
+    background: #c9c5b9;
   }
 
   input[type="number"] {
@@ -222,18 +232,18 @@
 
   .card-hover:hover {
     transform: translateY(-4px);
-    border-color: rgba(217, 218, 220, 0.24);
-    box-shadow: 0 28px 60px -34px rgba(0, 0, 0, 0.95);
+    border-color: #c9c5b9;
+    box-shadow: 0 24px 46px -30px rgba(23, 23, 23, 0.3);
   }
 
   .glow-primary {
-    box-shadow: 0 14px 44px -20px rgba(255, 201, 60, 0.55);
+    box-shadow: 0 14px 40px -22px rgba(232, 90, 36, 0.5);
   }
 
   .hero-grid {
     background-image:
-      linear-gradient(rgba(217, 218, 220, 0.055) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(217, 218, 220, 0.055) 1px, transparent 1px);
+      linear-gradient(rgba(23, 23, 23, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(23, 23, 23, 0.06) 1px, transparent 1px);
     background-size: 42px 42px;
   }
 

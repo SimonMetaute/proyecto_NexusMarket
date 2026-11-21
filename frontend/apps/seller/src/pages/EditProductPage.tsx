@@ -368,7 +368,7 @@ export function EditProductPage() {
                   {imagesQuery.data.map((image) => (
                     <li
                       key={image.imageId}
-                      className="overflow-hidden rounded-xl border border-[#D9DADC]/12"
+                      className="overflow-hidden rounded-xl border border-[#171717]/12"
                     >
                       <img
                         src={image.url}

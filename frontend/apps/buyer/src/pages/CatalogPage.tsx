@@ -133,7 +133,7 @@ export function CatalogPage() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-[#D9DADC]/10 bg-deep">
+      <section className="relative overflow-hidden rounded-3xl border border-[#171717]/10 bg-deep">
         <div className="hero-grid pointer-events-none absolute inset-0 opacity-70" />
         <div className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full bg-primary/[0.13] blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-primary/[0.06] blur-3xl" />
@@ -144,12 +144,12 @@ export function CatalogPage() {
               <Sparkles className="h-3.5 w-3.5" /> Catálogo en vivo
             </span>
             <div className="space-y-3">
-              <h1 className="text-balance text-3xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-4xl lg:text-[2.75rem]">
+              <h1 className="text-balance text-3xl font-bold leading-[1.08] tracking-tight text-on-deep sm:text-4xl lg:text-[2.75rem]">
                 Encuentra exactamente
                 <br />
                 <span className="text-primary">lo que necesitas.</span>
               </h1>
-              <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
+              <p className="max-w-lg text-sm leading-relaxed text-on-deep-muted">
                 Productos publicados por vendedores verificados. Precios, stock y
                 disponibilidad confirmados por el servidor.
               </p>
@@ -157,7 +157,7 @@ export function CatalogPage() {
 
             <form onSubmit={applySearch} role="search" className="max-w-xl">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-on-deep-muted" />
                 <input
                   type="search"
                   value={draft.search}
@@ -169,7 +169,7 @@ export function CatalogPage() {
                   }
                   placeholder="¿Qué estás buscando?"
                   aria-label="Buscar productos"
-                  className="h-14 w-full rounded-2xl border border-[#D9DADC]/15 bg-[#2B2D31]/80 pl-12 pr-36 text-base text-foreground placeholder:text-muted-foreground/80 shadow-[0_20px_50px_-30px_rgba(0,0,0,1)] transition-all duration-200 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="h-14 w-full rounded-2xl border border-[#f7f6f2]/15 bg-[#f7f6f2]/[0.07] pl-12 pr-36 text-base text-on-deep placeholder:text-on-deep-muted/80 shadow-[0_20px_50px_-30px_rgba(0,0,0,0.8)] transition-all duration-200 focus:border-primary/60 focus:bg-[#f7f6f2]/[0.1] focus:outline-none focus:ring-2 focus:ring-primary/25"
                 />
                 <Button
                   type="submit"
@@ -183,14 +183,14 @@ export function CatalogPage() {
               </div>
             </form>
 
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-on-deep-muted">
               <span className="uppercase tracking-[0.14em]">Populares:</span>
               {CATEGORIES.slice(0, 4).map((category) => (
                 <button
                   key={category}
                   type="button"
                   onClick={() => applyCategory(category)}
-                  className="rounded-full border border-[#D9DADC]/12 bg-white/[0.04] px-3 py-1 font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                  className="rounded-full border border-[#f7f6f2]/15 bg-[#f7f6f2]/[0.06] px-3 py-1 font-medium text-on-deep-muted transition-colors hover:border-primary/50 hover:bg-[#f7f6f2]/[0.1] hover:text-on-deep"
                 >
                   {category}
                 </button>
@@ -199,7 +199,7 @@ export function CatalogPage() {
           </div>
 
           <div className="relative hidden lg:block">
-            <div className="animate-float-slow rounded-2xl border border-[#D9DADC]/12 bg-card/80 p-5 backdrop-blur">
+            <div className="animate-float-slow rounded-2xl border border-[#171717]/12 bg-card/80 p-5 backdrop-blur">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Package className="h-5 w-5" />
@@ -213,7 +213,7 @@ export function CatalogPage() {
                   </p>
                 </div>
               </div>
-              <div className="mt-4 h-px bg-[#D9DADC]/10" />
+              <div className="mt-4 h-px bg-[#171717]/10" />
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <p className="text-muted-foreground">Categoría</p>
@@ -253,11 +253,11 @@ export function CatalogPage() {
 
       <form
         onSubmit={applyFilters}
-        className="rounded-2xl border border-[#D9DADC]/10 bg-card p-4 sm:p-5"
+        className="rounded-2xl border border-[#171717]/10 bg-card p-4 sm:p-5"
       >
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex items-center gap-2 pb-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            <SlidersHorizontal className="h-4 w-4 text-primary" /> Rango de precio
+            <SlidersHorizontal className="h-4 w-4 text-[#171717]/60" /> Rango de precio
           </div>
           <div className="w-32 space-y-1.5">
             <label htmlFor="minPrice" className="text-[11px] text-muted-foreground">
@@ -320,7 +320,7 @@ export function CatalogPage() {
           {Array.from({ length: 8 }).map((_, index) => (
             <div
               key={index}
-              className="space-y-3 rounded-2xl border border-[#D9DADC]/10 bg-card p-4"
+              className="space-y-3 rounded-2xl border border-[#171717]/10 bg-card p-4"
             >
               <Skeleton className="h-40 w-full" />
               <Skeleton className="h-4 w-3/4" />
@@ -355,7 +355,7 @@ export function CatalogPage() {
               {totalPages}
             </span>
             {isFetching ? (
-              <span className="text-xs text-primary">Actualizando…</span>
+              <span className="text-xs text-accent-foreground">Actualizando…</span>
             ) : null}
           </div>
 
@@ -365,22 +365,22 @@ export function CatalogPage() {
               return (
                 <article
                   key={product.productId}
-                  className="card-hover group flex flex-col overflow-hidden rounded-2xl border border-[#D9DADC]/10 bg-card"
+                  className="card-hover group flex flex-col overflow-hidden rounded-2xl border border-[#171717]/10 bg-card"
                 >
                   <Link
                     to={`/products/${product.productId}`}
-                    className="relative flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-white/[0.06] via-white/[0.02] to-transparent"
+                    className="relative flex h-44 items-center justify-center overflow-hidden bg-[#f7f6f2]/[0.04]"
                     aria-label={`Ver ${product.name}`}
                   >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,201,60,0.10),transparent_55%)]" />
-                    <Package className="h-16 w-16 text-white/15 transition-transform duration-500 ease-smooth group-hover:scale-110 group-hover:text-primary/30" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(232,90,36,0.10),transparent_55%)]" />
+                    <Package className="h-16 w-16 text-[#171717]/20 transition-transform duration-500 ease-smooth group-hover:scale-110 group-hover:text-[#171717]/40" />
                     <span className="absolute left-3 top-3">
                       <Badge variant={inStock ? 'success' : 'destructive'}>
                         <span
                           className={
                             inStock
-                              ? 'h-1.5 w-1.5 rounded-full bg-emerald-300'
-                              : 'h-1.5 w-1.5 rounded-full bg-red-300'
+                              ? 'h-1.5 w-1.5 rounded-full bg-emerald-700'
+                              : 'h-1.5 w-1.5 rounded-full bg-red-700'
                           }
                         />
                         {inStock ? `${product.stock} en stock` : 'Sin stock'}
@@ -399,7 +399,7 @@ export function CatalogPage() {
                     </div>
 
                     <div className="space-y-1">
-                      <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+                      <h2 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-accent-foreground">
                         <Link to={`/products/${product.productId}`}>
                           {product.name}
                         </Link>
@@ -415,12 +415,12 @@ export function CatalogPage() {
                           SKU {product.sku}
                         </p>
                       ) : null}
-                      <p className="text-2xl font-bold tracking-tight text-primary tabular-nums">
+                      <p className="text-2xl font-bold tracking-tight text-accent-foreground tabular-nums">
                         {formatMoney(product.price)}
                       </p>
                       <Link
                         to={`/products/${product.productId}`}
-                        className="flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-[#D9DADC]/15 bg-white/[0.03] text-xs font-semibold text-foreground transition-all duration-200 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+                        className="flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-[#171717]/15 bg-[#f7f6f2]/[0.04] text-xs font-semibold text-foreground transition-all duration-200 hover:border-[#c4c0b5] hover:bg-[#f7f6f2]/[0.08] hover:text-accent-foreground-hover"
                       >
                         Ver producto
                         <ArrowRight className="h-3.5 w-3.5" />
@@ -432,7 +432,7 @@ export function CatalogPage() {
             })}
           </div>
 
-          <div className="flex items-center justify-between gap-2 border-t border-[#D9DADC]/10 pt-4">
+          <div className="flex items-center justify-between gap-2 border-t border-[#171717]/10 pt-4">
             <Button
               variant="outline"
               size="sm"
@@ -474,8 +474,8 @@ function FilterPill({
       onClick={onClick}
       className={
         active
-          ? 'shrink-0 rounded-full border border-primary/40 bg-primary/15 px-4 py-1.5 text-xs font-semibold text-primary transition-colors'
-          : 'shrink-0 rounded-full border border-[#D9DADC]/12 bg-white/[0.03] px-4 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-[#D9DADC]/25 hover:text-foreground'
+          ? 'shrink-0 rounded-full border border-primary/40 bg-primary/[0.12] px-4 py-1.5 text-xs font-semibold text-primary-foreground transition-colors'
+          : 'shrink-0 rounded-full border border-[#171717]/12 bg-[#f7f6f2]/[0.03] px-4 py-1.5 text-xs font-medium text-[#171717]/60 transition-colors hover:border-[#171717]/20 hover:text-foreground'
       }
     >
       {children}

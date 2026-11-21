@@ -27,23 +27,23 @@ export function AppShell({
 
   return (
     <div className="min-h-screen lg:flex">
-      <aside className="border-b border-[#D9DADC]/10 bg-sidebar lg:flex lg:h-screen lg:w-[264px] lg:shrink-0 lg:flex-col lg:sticky lg:top-0 lg:border-b-0 lg:border-r">
+      <aside className="border-b border-[#171717]/60 bg-sidebar lg:flex lg:h-screen lg:w-[264px] lg:shrink-0 lg:flex-col lg:sticky lg:top-0 lg:border-b-0 lg:border-r">
         <div className="flex items-center gap-3 px-5 py-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_10px_30px_-14px_rgba(255,201,60,0.8)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_10px_28px_-14px_rgba(232,90,36,0.8)]">
             <ShoppingBag className="h-[18px] w-[18px]" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold tracking-tight text-foreground">
+            <p className="truncate text-sm font-semibold tracking-tight text-on-deep">
               NexusMarket
             </p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-xs text-on-deep-muted">
               {portal.name}
             </p>
           </div>
         </div>
 
         <div className="hidden px-5 pb-3 lg:block">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-on-deep-muted/70">
             Operaciones
           </p>
         </div>
@@ -58,8 +58,8 @@ export function AppShell({
                 cn(
                   'group relative flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ease-smooth',
                   isActive
-                    ? 'bg-primary/[0.12] text-foreground shadow-[inset_0_0_0_1px_rgba(255,201,60,0.18)]'
-                    : 'text-muted-foreground hover:bg-white/[0.05] hover:text-foreground',
+                    ? 'bg-primary/[0.14] text-on-deep shadow-[inset_0_0_0_1px_rgba(232,90,36,0.22)]'
+                    : 'text-on-deep-muted hover:bg-[#f7f6f2]/[0.06] hover:text-on-deep',
                 )
               }
             >
@@ -70,7 +70,7 @@ export function AppShell({
                       'h-4 w-4 transition-colors',
                       isActive
                         ? 'text-primary'
-                        : 'text-muted-foreground group-hover:text-foreground',
+                        : 'text-on-deep-muted group-hover:text-on-deep',
                     )}
                   />
                   <span className="whitespace-nowrap">{item.label}</span>
@@ -83,16 +83,16 @@ export function AppShell({
           ))}
         </nav>
 
-        <div className="mt-auto hidden border-t border-[#D9DADC]/10 p-4 lg:block">
-          <div className="flex items-center gap-3 rounded-xl bg-white/[0.03] p-3">
+        <div className="mt-auto hidden border-t border-[#f7f6f2]/10 p-4 lg:block">
+          <div className="flex items-center gap-3 rounded-xl bg-[#f7f6f2]/[0.04] p-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-xs font-bold text-primary tabular-nums">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-foreground">
+              <p className="truncate text-xs font-semibold text-on-deep">
                 {session?.user.username}
               </p>
-              <p className="truncate text-[11px] text-muted-foreground">
+              <p className="truncate text-[11px] text-on-deep-muted">
                 {session?.user.email}
               </p>
             </div>
@@ -101,6 +101,7 @@ export function AppShell({
               variant="ghost"
               size="icon"
               aria-label="Cerrar sesión"
+              className="text-on-deep-muted hover:bg-[#f7f6f2]/10 hover:text-on-deep"
               onClick={() => void logout()}
             >
               <LogOut className="h-4 w-4" />
@@ -110,7 +111,7 @@ export function AppShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-[#D9DADC]/10 bg-background/75 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">
               {portal.description}

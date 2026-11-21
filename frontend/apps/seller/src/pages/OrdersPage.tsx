@@ -143,8 +143,8 @@ export function OrdersPage() {
               className={cn(
                 'shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors',
                 active
-                  ? 'border-primary/40 bg-primary/15 text-primary'
-                  : 'border-[#D9DADC]/12 bg-white/[0.03] text-muted-foreground hover:border-[#D9DADC]/25 hover:text-foreground',
+                  ? 'border-primary/40 bg-primary/[0.12] text-primary-foreground'
+                  : 'border-[#171717]/12 bg-[#f7f6f2]/[0.03] text-[#171717]/60 hover:border-[#171717]/20 hover:text-foreground',
               )}
             >
               {status.length === 0 ? 'Todas' : status}
@@ -212,7 +212,7 @@ export function OrdersPage() {
                     {order.orderStatus}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-semibold text-primary tabular-nums">
+                <TableCell className="font-semibold text-accent-foreground tabular-nums">
                   {formatMoney(order.total)}
                 </TableCell>
                 <TableCell className="text-muted-foreground tabular-nums">

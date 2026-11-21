@@ -171,7 +171,7 @@ export function ProfilePage() {
             {addresses.map((address) => (
               <div
                 key={address.addressId}
-                className="rounded-xl border border-[#D9DADC]/12 bg-white/[0.02] p-3 text-sm transition-colors hover:border-[#D9DADC]/20"
+                className="rounded-xl border border-[#171717]/12 bg-[#171717]/[0.02] p-3 text-sm transition-colors hover:border-[#171717]/20"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -202,7 +202,7 @@ export function ProfilePage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-red-300 hover:bg-red-400/10 hover:text-red-200"
+                    className="text-red-700 hover:bg-red-600/10 hover:text-red-800"
                     loading={remove.isPending}
                     onClick={() => remove.mutate(address.addressId)}
                   >
@@ -240,7 +240,7 @@ export function ProfilePage() {
             {payments.map((payment) => (
               <div
                 key={payment.paymentMethodId}
-                className="rounded-xl border border-[#D9DADC]/12 bg-white/[0.02] p-3 text-sm transition-colors hover:border-[#D9DADC]/20"
+                className="rounded-xl border border-[#171717]/12 bg-[#171717]/[0.02] p-3 text-sm transition-colors hover:border-[#171717]/20"
               >
                 <div className="flex items-center justify-between">
                   <p className="font-medium">

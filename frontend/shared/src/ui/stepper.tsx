@@ -42,10 +42,10 @@ export function Stepper({
                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold tabular-nums transition-all duration-300 ease-smooth',
                     done && 'border-primary bg-primary text-primary-foreground',
                     active &&
-                      'border-primary bg-primary/15 text-primary shadow-[0_0_0_4px_rgba(255,201,60,0.12)]',
+                      'border-primary bg-primary/15 text-accent-foreground shadow-[0_0_0_4px_rgba(232,90,36,0.12)]',
                     !done &&
                       !active &&
-                      'border-[#D9DADC]/20 bg-white/[0.03] text-muted-foreground',
+                      'border-border bg-[#171717]/[0.03] text-subtle',
                   )}
                 >
                   {done ? <Check className="h-4 w-4" /> : index + 1}
@@ -54,7 +54,7 @@ export function Stepper({
                   <span
                     className={cn(
                       'h-0.5 flex-1 rounded-full transition-colors duration-500',
-                      done ? 'bg-primary/70' : 'bg-[#D9DADC]/15',
+                      done ? 'bg-primary/70' : 'bg-border',
                     )}
                   />
                 ) : null}
@@ -79,7 +79,7 @@ export function Stepper({
         })}
       </ol>
       {failed ? (
-        <p className="mt-3 inline-flex items-center rounded-full border border-red-400/25 bg-red-400/10 px-3 py-1 text-xs font-semibold text-red-300">
+        <p className="mt-3 inline-flex items-center rounded-full border border-red-600/20 bg-red-600/[0.08] px-3 py-1 text-xs font-semibold text-red-700">
           {errorLabel}
         </p>
       ) : null}

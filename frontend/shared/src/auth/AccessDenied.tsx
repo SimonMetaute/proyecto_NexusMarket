@@ -11,11 +11,11 @@ export function AccessDenied({ portal }: { portal: PortalDefinition }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md rounded-2xl border border-[#D9DADC]/12 bg-card p-8 text-center shadow-[0_30px_70px_-45px_rgba(0,0,0,1)] animate-scale-in">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/25 bg-red-400/10">
-          <ShieldX className="h-7 w-7 text-red-300" />
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-[0_30px_60px_-40px_rgba(23,23,23,0.35)] animate-scale-in">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-600/20 bg-red-600/[0.08]">
+          <ShieldX className="h-7 w-7 text-red-700" />
         </div>
-        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
+        <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-red-700">
           403
         </p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight">Acceso denegado</h1>

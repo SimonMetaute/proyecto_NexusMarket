@@ -139,7 +139,7 @@ export function ProductsPage() {
         />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-[#D9DADC]/10 bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-[#171717]/10 bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -161,8 +161,8 @@ export function ProductsPage() {
                 className={cn(
                   'shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors',
                   active
-                    ? 'border-primary/40 bg-primary/15 text-primary'
-                    : 'border-[#D9DADC]/12 bg-white/[0.03] text-muted-foreground hover:border-[#D9DADC]/25 hover:text-foreground',
+                    ? 'border-primary/40 bg-primary/[0.12] text-primary-foreground'
+                    : 'border-[#171717]/12 bg-[#f7f6f2]/[0.03] text-[#171717]/60 hover:border-[#171717]/20 hover:text-foreground',
                 )}
               >
                 {status.length === 0 ? 'Todos' : status}
@@ -236,7 +236,7 @@ export function ProductsPage() {
                 <TableCell className="text-muted-foreground">
                   {product.category ?? '—'}
                 </TableCell>
-                <TableCell className="font-semibold text-primary tabular-nums">
+                <TableCell className="font-semibold text-accent-foreground tabular-nums">
                   {formatMoney(product.price)}
                 </TableCell>
                 <TableCell className="tabular-nums">{product.stock}</TableCell>

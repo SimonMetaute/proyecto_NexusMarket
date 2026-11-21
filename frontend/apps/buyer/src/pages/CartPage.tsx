@@ -117,7 +117,7 @@ export function CartPage() {
           <Button
             variant="outline"
             size="sm"
-            className="border-red-400/25 text-red-300 hover:border-red-400/40 hover:bg-red-400/10"
+            className="border-red-600/25 text-red-700 hover:border-red-600/40 hover:bg-red-600/10"
             loading={clear.isPending}
             onClick={() => clear.mutate()}
           >
@@ -145,7 +145,7 @@ export function CartPage() {
             {cart.cartLines.map((line) => (
               <div
                 key={line.cartLineId}
-                className="card-hover flex flex-col gap-4 rounded-2xl border border-[#D9DADC]/10 bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="card-hover flex flex-col gap-4 rounded-2xl border border-[#171717]/10 bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 space-y-1">
                   <p className="truncate font-semibold text-foreground">
@@ -157,14 +157,14 @@ export function CartPage() {
                   </p>
                   <p className="text-sm text-muted-foreground tabular-nums">
                     {formatMoney(line.unitPrice)} · subtotal{' '}
-                    <span className="font-semibold text-primary">
+                    <span className="font-semibold text-accent-foreground">
                       {formatMoney(line.subtotal)}
                     </span>
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center rounded-xl border border-[#D9DADC]/15 bg-[#1E1F22]/60">
+                  <div className="flex items-center rounded-xl border border-[#f7f6f2]/12 bg-[#f7f6f2]/[0.05]">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -203,7 +203,7 @@ export function CartPage() {
                     variant="ghost"
                     size="icon"
                     aria-label="Eliminar línea"
-                    className="text-red-300 hover:bg-red-400/10 hover:text-red-200"
+                    className="text-red-700 hover:bg-red-600/10 hover:text-red-800"
                     disabled={removeItem.isPending}
                     onClick={() => removeItem.mutate(line.cartLineId)}
                   >
@@ -214,16 +214,16 @@ export function CartPage() {
             ))}
           </div>
 
-          <aside className="h-fit space-y-4 rounded-2xl border border-[#D9DADC]/12 bg-card p-5 lg:sticky lg:top-24">
+          <aside className="h-fit space-y-4 rounded-2xl border border-[#171717]/12 bg-card p-5 lg:sticky lg:top-24">
             <h2 className="text-base font-semibold tracking-tight">Resumen</h2>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Subtotal</dt>
                 <dd className="tabular-nums">{formatMoney(cart.subtotal)}</dd>
               </div>
-              <div className="flex items-center justify-between border-t border-[#D9DADC]/10 pt-2 text-base font-semibold">
+              <div className="flex items-center justify-between border-t border-[#171717]/10 pt-2 text-base font-semibold">
                 <dt>Total</dt>
-                <dd className="text-xl font-bold text-primary tabular-nums">
+                <dd className="text-xl font-bold text-accent-foreground tabular-nums">
                   {formatMoney(cart.total)}
                 </dd>
               </div>

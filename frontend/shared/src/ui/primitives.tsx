@@ -14,8 +14,8 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-2xl border border-[#D9DADC]/10 bg-card text-card-foreground',
-        'shadow-[0_1px_0_rgba(255,255,255,0.03)_inset,0_18px_40px_-30px_rgba(0,0,0,0.9)]',
+        'rounded-2xl border border-border bg-card text-card-foreground',
+        'shadow-[0_1px_0_rgba(255,255,255,0.55)_inset,0_18px_36px_-30px_rgba(23,23,23,0.25)]',
         className,
       )}
       {...props}
@@ -88,7 +88,7 @@ export function Label({
 }
 
 export const inputClassName =
-  'flex h-10 w-full rounded-xl border border-[#D9DADC]/15 bg-[#1E1F22]/60 px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 transition-all duration-200 focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50';
+  'flex h-10 w-full rounded-xl border border-border bg-[#f9f8f4] px-3.5 py-2 text-sm text-foreground placeholder:text-subtle/80 transition-all duration-200 focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function Input({
   className,

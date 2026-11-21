@@ -6,23 +6,23 @@ export const buttonVariants = cva(
   [
     'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold tracking-tight',
     'transition-all duration-200 ease-smooth active:scale-[0.98]',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
     'disabled:pointer-events-none disabled:opacity-45',
   ].join(' '),
   {
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_10px_30px_-14px_rgba(255,201,60,0.7)]',
+          'bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_10px_26px_-14px_rgba(232,90,36,0.65)]',
         outline:
-          'border border-[#D9DADC]/20 bg-transparent text-foreground hover:border-[#D9DADC]/35 hover:bg-white/[0.06]',
+          'border border-border bg-transparent text-foreground hover:border-[#c4c0b5] hover:bg-[#171717]/[0.04]',
         secondary:
-          'bg-white/[0.07] text-foreground hover:bg-white/[0.12] border border-[#D9DADC]/10',
+          'bg-secondary text-secondary-foreground hover:bg-[#dedbd1] border border-[#171717]/10',
         ghost:
-          'text-muted-foreground hover:bg-white/[0.06] hover:text-foreground',
+          'text-muted-foreground hover:bg-[#171717]/[0.05] hover:text-foreground',
         destructive:
-          'border border-red-400/30 bg-red-400/10 text-red-300 hover:bg-red-400/20 hover:text-red-200',
-        link: 'text-primary hover:text-primary-hover underline-offset-4 hover:underline',
+          'border border-red-600/25 bg-red-600/[0.08] text-red-700 hover:bg-red-600/15 hover:text-red-800',
+        link: 'text-accent-foreground hover:text-accent-foreground-hover underline-offset-4 hover:underline',
       },
       size: {
         sm: 'h-8 px-3 text-xs',

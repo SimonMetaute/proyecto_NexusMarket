@@ -119,7 +119,7 @@ export function OrdersPage() {
                     {order.orderStatus}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-semibold text-primary tabular-nums">
+                <TableCell className="font-semibold text-accent-foreground tabular-nums">
                   {formatMoney(order.total)}
                 </TableCell>
                 <TableCell className="text-muted-foreground tabular-nums">
@@ -128,7 +128,7 @@ export function OrdersPage() {
                 <TableCell className="text-right">
                   <Link
                     to={`/orders/${order.orderId}`}
-                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 hover:text-primary-hover"
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-accent-foreground transition-colors hover:bg-[#f7f6f2]/[0.08] hover:text-accent-foreground-hover"
                   >
                     Ver detalle
                     <ArrowUpRight className="h-3.5 w-3.5" />

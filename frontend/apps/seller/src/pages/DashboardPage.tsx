@@ -213,7 +213,7 @@ export function DashboardPage() {
             </div>
             <Link
               to="/orders"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary transition-colors hover:text-primary-hover"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-accent-foreground transition-colors hover:text-accent-foreground-hover"
             >
               Ver todas <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -245,7 +245,7 @@ export function DashboardPage() {
                           {order.orderStatus}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-semibold text-primary tabular-nums">
+                      <TableCell className="font-semibold text-accent-foreground tabular-nums">
                         {formatMoney(order.total)}
                       </TableCell>
                       <TableCell className="text-muted-foreground tabular-nums">

@@ -27,10 +27,10 @@ export function StorefrontShell() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-[#D9DADC]/10 bg-deep/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4">
           <Link to="/" className="group flex shrink-0 items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_10px_30px_-14px_rgba(255,201,60,0.8)] transition-transform duration-300 ease-smooth group-hover:-rotate-6">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_10px_28px_-14px_rgba(232,90,36,0.8)] transition-transform duration-300 ease-smooth group-hover:-rotate-6">
               <ShoppingBag className="h-[18px] w-[18px]" />
             </span>
             <span className="hidden flex-col leading-none sm:flex">
@@ -55,7 +55,7 @@ export function StorefrontShell() {
               onChange={(event) => setTerm(event.target.value)}
               placeholder="Buscar productos, marcas y categorías…"
               aria-label="Buscar en el catálogo"
-              className="h-11 w-full rounded-xl border border-[#D9DADC]/15 bg-white/[0.04] pl-11 pr-24 text-sm text-foreground placeholder:text-muted-foreground/80 transition-all duration-200 focus:border-primary/50 focus:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-primary/15"
+              className="h-11 w-full rounded-xl border border-border bg-[#f9f8f4] pl-11 pr-24 text-sm text-foreground placeholder:text-subtle/80 transition-all duration-200 focus:border-primary/50 focus:bg-[#fffdf8] focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
             <button
               type="submit"
@@ -92,7 +92,7 @@ export function StorefrontShell() {
                   to="/profile"
                   className={cn(
                     buttonVariants({ size: 'icon', variant: 'ghost' }),
-                    'rounded-full border border-[#D9DADC]/15 bg-white/[0.04]',
+                    'rounded-full border border-border bg-elevated',
                   )}
                   aria-label="Mi perfil"
                 >
@@ -113,10 +113,10 @@ export function StorefrontShell() {
               to="/cart"
               className={cn(
                 buttonVariants({ size: 'sm', variant: 'outline' }),
-                'group gap-2 border-[#D9DADC]/20',
+                'group gap-2 border-border',
               )}
             >
-              <ShoppingCart className="h-4 w-4 text-primary transition-transform duration-300 ease-smooth group-hover:-translate-y-0.5 group-hover:scale-110" />
+              <ShoppingCart className="h-4 w-4 text-accent-foreground transition-transform duration-300 ease-smooth group-hover:-translate-y-0.5 group-hover:scale-110" />
               <span className="hidden sm:inline">Carrito</span>
             </Link>
           </div>
@@ -132,14 +132,14 @@ export function StorefrontShell() {
                 onChange={(event) => setTerm(event.target.value)}
                 placeholder="Buscar en NexusMarket…"
                 aria-label="Buscar en el catálogo"
-                className="h-10 w-full rounded-xl border border-[#D9DADC]/15 bg-white/[0.04] pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/15"
+                className="h-10 w-full rounded-xl border border-border bg-[#f9f8f4] pl-10 pr-3 text-sm text-foreground placeholder:text-subtle/80 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/15"
               />
             </div>
           </form>
         </div>
 
         {isBuyer ? (
-          <nav className="scrollbar-none flex gap-1 overflow-x-auto border-t border-[#D9DADC]/10 px-4 py-2 lg:hidden">
+          <nav className="scrollbar-none flex gap-1 overflow-x-auto border-t border-border px-4 py-2 lg:hidden">
             <StoreLink to="/" label="Catálogo" end />
             <StoreLink to="/orders" label="Mis órdenes" />
             <StoreLink to="/profile" label="Perfil" />
@@ -151,8 +151,8 @@ export function StorefrontShell() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-[#D9DADC]/10 bg-deep/60">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      <footer className="border-t border-[#171717] bg-deep">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-on-deep-muted sm:flex-row sm:items-center sm:justify-between">
           <span>NexusMarket · Buyer Storefront (puerto 5173)</span>
           <span className="font-mono tabular-nums">
             API http://localhost:3000/api/v1

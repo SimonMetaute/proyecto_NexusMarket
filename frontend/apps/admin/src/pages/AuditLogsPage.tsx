@@ -181,7 +181,7 @@ export function AuditLogsPage() {
                     #{log.actorId.slice(0, 8)}
                   </TableCell>
                   <TableCell className="max-w-md">
-                    <code className="block truncate rounded-lg bg-white/[0.04] px-2 py-1 font-mono text-[11px] text-muted-foreground">
+                    <code className="block truncate rounded-lg bg-[#171717]/[0.04] px-2 py-1 font-mono text-[11px] text-muted-foreground">
                       {JSON.stringify(log.details)}
                     </code>
                   </TableCell>

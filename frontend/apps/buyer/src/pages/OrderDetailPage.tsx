@@ -195,9 +195,9 @@ export function OrderDetailPage() {
                       </span>
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-between border-t border-[#D9DADC]/10 pt-3 text-base">
+                  <div className="flex items-center justify-between border-t border-[#171717]/10 pt-3 text-base">
                     <span className="font-medium text-foreground">Total</span>
-                    <span className="text-xl font-bold text-primary tabular-nums">
+                    <span className="text-xl font-bold text-accent-foreground tabular-nums">
                       {formatMoney(data.total)}
                     </span>
                   </div>
@@ -221,7 +221,7 @@ export function OrderDetailPage() {
                       {orderReturns.map((returnCase) => (
                         <li
                           key={returnCase.returnId}
-                          className="rounded-xl border border-[#D9DADC]/12 bg-white/[0.02] p-3"
+                          className="rounded-xl border border-[#171717]/12 bg-[#171717]/[0.02] p-3"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <Badge variant={statusVariant(returnCase.returnStatus)}>

@@ -114,16 +114,16 @@ export function ProductDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <div className="space-y-5">
-          <div className="group relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-3xl border border-[#D9DADC]/10 bg-gradient-to-br from-white/[0.07] via-white/[0.02] to-transparent">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(255,201,60,0.12),transparent_58%)]" />
+          <div className="group relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-3xl border border-[#f7f6f2]/12 bg-[#f7f6f2]/[0.05]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(232,90,36,0.10),transparent_58%)]" />
             <div className="hero-grid absolute inset-0 opacity-40" />
-            <Package className="relative h-28 w-28 text-white/15 transition-transform duration-500 ease-smooth group-hover:scale-105" />
-            <span className="absolute bottom-4 left-4 rounded-full border border-[#D9DADC]/12 bg-[#1E1F22]/70 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur">
+            <Package className="relative h-28 w-28 text-[#171717]/20 transition-transform duration-500 ease-smooth group-hover:scale-105" />
+            <span className="absolute bottom-4 left-4 rounded-full border border-[#f7f6f2]/15 bg-[#f7f6f2]/[0.06] px-3 py-1 text-[11px] text-[#171717]/60 backdrop-blur">
               Sin imagen en el contrato del backend
             </span>
           </div>
 
-          <div className="rounded-2xl border border-[#D9DADC]/10 bg-card p-5 sm:p-6">
+          <div className="rounded-2xl border border-[#171717]/10 bg-card p-5 sm:p-6">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
               Descripción
             </h2>
@@ -178,7 +178,7 @@ export function ProductDetailPage() {
         </div>
 
         <aside className="lg:sticky lg:top-24">
-          <div className="rounded-2xl border border-[#D9DADC]/12 bg-card p-5 shadow-[0_30px_70px_-45px_rgba(0,0,0,1)] sm:p-6">
+          <div className="rounded-2xl border border-[#171717]/12 bg-card p-5 shadow-[0_30px_70px_-45px_rgba(0,0,0,1)] sm:p-6">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{data.category}</Badge>
               <Badge variant={statusVariant(data.productStatus)}>
@@ -194,7 +194,7 @@ export function ProductDetailPage() {
             </h1>
 
             <div className="mt-5 flex items-end gap-3">
-              <p className="text-4xl font-bold tracking-tight text-primary tabular-nums">
+              <p className="text-4xl font-bold tracking-tight text-accent-foreground tabular-nums">
                 {formatMoney(data.price)}
               </p>
               <span className="pb-1 text-xs text-muted-foreground">
@@ -206,8 +206,8 @@ export function ProductDetailPage() {
               <span
                 className={
                   inStock
-                    ? 'flex h-2 w-2 rounded-full bg-emerald-400'
-                    : 'flex h-2 w-2 rounded-full bg-red-400'
+                    ? 'flex h-2 w-2 rounded-full bg-emerald-600'
+                    : 'flex h-2 w-2 rounded-full bg-red-600'
                 }
               />
               {inStock
@@ -215,7 +215,7 @@ export function ProductDetailPage() {
                 : 'Producto sin stock'}
             </div>
 
-            <div className="my-5 h-px bg-[#D9DADC]/10" />
+            <div className="my-5 h-px bg-[#171717]/10" />
 
             {message !== null ? (
               <Alert variant="success" className="mb-4">
@@ -234,7 +234,7 @@ export function ProductDetailPage() {
                   <Link
                     to="/login"
                     state={{ from: location.pathname }}
-                    className="font-semibold text-primary hover:text-primary-hover"
+                    className="font-semibold text-accent-foreground hover:text-accent-foreground-hover"
                   >
                     Ingresar como comprador
                   </Link>
@@ -248,7 +248,7 @@ export function ProductDetailPage() {
                 {correctPortal !== undefined ? (
                   <div className="mt-2">
                     <a
-                      className="font-semibold text-primary hover:text-primary-hover"
+                      className="font-semibold text-accent-foreground hover:text-accent-foreground-hover"
                       href={portalUrl(correctPortal.port)}
                     >
                       Ir a {correctPortal.name} (:{correctPortal.port})
@@ -268,7 +268,7 @@ export function ProductDetailPage() {
                     Cantidad
                   </label>
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center rounded-xl border border-[#D9DADC]/15 bg-[#1E1F22]/60">
+                    <div className="flex items-center rounded-xl border border-[#171717]/15 bg-[#1E1F22]/60">
                       <button
                         type="button"
                         aria-label="Disminuir cantidad"
@@ -285,7 +285,7 @@ export function ProductDetailPage() {
                         max={maxQuantity}
                         value={quantity}
                         onChange={(event) => updateQuantity(Number(event.target.value))}
-                        className="h-10 w-14 border-x border-[#D9DADC]/10 bg-transparent text-center text-sm font-semibold text-foreground tabular-nums focus:outline-none"
+                        className="h-10 w-14 border-x border-[#171717]/10 bg-transparent text-center text-sm font-semibold text-foreground tabular-nums focus:outline-none"
                       />
                       <button
                         type="button"
@@ -316,20 +316,20 @@ export function ProductDetailPage() {
                 </Button>
                 <Link
                   to="/cart"
-                  className="flex items-center justify-center text-xs font-semibold text-primary transition-colors hover:text-primary-hover"
+                  className="flex items-center justify-center text-xs font-semibold text-accent-foreground transition-colors hover:text-accent-foreground-hover"
                 >
                   Ver carrito
                 </Link>
               </div>
             ) : null}
 
-            <div className="mt-6 space-y-3 border-t border-[#D9DADC]/10 pt-4 text-xs text-muted-foreground">
+            <div className="mt-6 space-y-3 border-t border-[#171717]/10 pt-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-2.5">
-                <Truck className="h-4 w-4 text-primary/80" />
+                <Truck className="h-4 w-4 text-[#171717]/50" />
                 Envío gestionado por el operador logístico
               </div>
               <div className="flex items-center gap-2.5">
-                <ShieldCheck className="h-4 w-4 text-primary/80" />
+                <ShieldCheck className="h-4 w-4 text-[#171717]/50" />
                 Devoluciones hasta 30 días tras la entrega
               </div>
             </div>
