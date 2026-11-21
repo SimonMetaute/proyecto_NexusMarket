@@ -278,13 +278,13 @@ export function ProductDetailPage() {
                     Cantidad
                   </label>
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center rounded-xl border border-[#171717]/15 bg-[#1E1F22]/60">
+                    <div className="flex items-center rounded-xl border border-[#DCD9D0] bg-[#F4F3EE]">
                       <button
                         type="button"
                         aria-label="Disminuir cantidad"
                         onClick={() => updateQuantity(quantity - 1)}
                         disabled={quantity <= 1}
-                        className="flex h-10 w-10 items-center justify-center rounded-l-xl text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+                        className="flex h-10 w-10 items-center justify-center rounded-l-xl text-[#141414] transition-colors hover:bg-[#E8E5DC] disabled:opacity-40"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
@@ -295,14 +295,14 @@ export function ProductDetailPage() {
                         max={maxQuantity}
                         value={quantity}
                         onChange={(event) => updateQuantity(Number(event.target.value))}
-                        className="h-10 w-14 border-x border-[#171717]/10 bg-transparent text-center text-sm font-semibold text-foreground tabular-nums focus:outline-none"
+                        className="h-10 w-14 border-x border-[#DCD9D0] bg-transparent text-center text-sm font-semibold text-[#141414] tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:outline-none"
                       />
                       <button
                         type="button"
                         aria-label="Aumentar cantidad"
                         onClick={() => updateQuantity(quantity + 1)}
                         disabled={quantity >= maxQuantity}
-                        className="flex h-10 w-10 items-center justify-center rounded-r-xl text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+                        className="flex h-10 w-10 items-center justify-center rounded-r-xl text-[#141414] transition-colors hover:bg-[#E8E5DC] disabled:opacity-40"
                       >
                         <Plus className="h-4 w-4" />
                       </button>
