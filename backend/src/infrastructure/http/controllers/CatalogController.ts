@@ -5,8 +5,11 @@
 import type { Request, Response } from 'express';
 import type { PublicAccessPort } from '../../../domain/ports/in/PublicAccessPort.js';
 import type { ProductImageRepositoryPort } from '../../../domain/ports/out/ProductImageRepositoryPort.js';
+import type { InventoryRepositoryPort } from '../../../domain/ports/out/InventoryRepositoryPort.js';
+import type { WarehouseRepositoryPort } from '../../../domain/ports/out/WarehouseRepositoryPort.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { optionalString, requireParam } from '../validation/validator.js';
+import { WarehouseStatus } from '../../../domain/model/enums.js';
 
 function asString(value: unknown): string | undefined {
   if (value === undefined || value === null) {
@@ -30,13 +33,19 @@ function queryNumber(value: unknown): number | undefined {
 export class CatalogController {
   private readonly publicAccess: PublicAccessPort;
   private readonly productImageRepository: ProductImageRepositoryPort;
+  private readonly inventoryRepository: InventoryRepositoryPort;
+  private readonly warehouseRepository: WarehouseRepositoryPort;
 
   constructor(
     publicAccess: PublicAccessPort,
     productImageRepository: ProductImageRepositoryPort,
+    inventoryRepository: InventoryRepositoryPort,
+    warehouseRepository: WarehouseRepositoryPort,
   ) {
     this.publicAccess = publicAccess;
     this.productImageRepository = productImageRepository;
+    this.inventoryRepository = inventoryRepository;
+    this.warehouseRepository = warehouseRepository;
   }
 
   async searchProducts(req: Request, res: Response): Promise<void> {
@@ -67,6 +76,7 @@ export class CatalogController {
     const productsWithImages = await Promise.all(
       paginated.map(async (p) => {
         const images = await this.productImageRepository.findByProductId(p.productId);
+        const stock = await this.resolveAvailableStock(p.productId);
         return {
           productId: p.productId,
           name: p.name,
@@ -78,7 +88,7 @@ export class CatalogController {
           brand: p.brand,
           sku: p.sku,
           productStatus: p.productStatus,
-          stock: p.stock,
+          stock,
           images: images.map((img) => ({
             imageId: img.imageId,
             productId: img.productId,
@@ -123,7 +133,7 @@ export class CatalogController {
       sku: product.sku,
       productStatus: product.productStatus,
       publicationDate: product.publicationDate,
-      stock: product.stock,
+      stock: await this.resolveAvailableStock(productId),
       createdAt: product.createdAt,
       images: images.map((img) => ({
         imageId: img.imageId,
@@ -134,5 +144,30 @@ export class CatalogController {
         createdAt: img.createdAt instanceof Date ? img.createdAt.toISOString() : String(img.createdAt),
       })),
     });
+  }
+
+  /**
+   * Calcula la disponibilidad real sumando el inventario disponible de las
+   * bodegas activas (Operational) del producto. Si no hay inventario, 0.
+   */
+  private async resolveAvailableStock(productId: string): Promise<number> {
+    const inventories = await this.inventoryRepository.findByProduct({
+      productId,
+    } as any);
+    if (!inventories || inventories.length === 0) {
+      return 0;
+    }
+    let total = 0;
+    for (const inv of inventories) {
+      const warehouse = await this.warehouseRepository.findById(inv.warehouseId);
+      if (warehouse === null) {
+        continue;
+      }
+      if (warehouse.status !== WarehouseStatus.OPERATIONAL) {
+        continue;
+      }
+      total += inv.availableStock;
+    }
+    return total;
   }
 }
