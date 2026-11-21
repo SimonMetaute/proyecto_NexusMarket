@@ -31,6 +31,7 @@ import type { AuditLogRepository } from '../../domain/ports/out/AuditLogReposito
 import { AuditLog } from '../../domain/model/AuditLog.js';
 import {
   OrderStatus,
+  ProductStatus,
   ReturnStatus,
   ShipmentStatus,
   WarehouseStatus,
@@ -154,6 +155,23 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
     if (adjustment.value > 0) inventory.addStock(adjustment.value);
     else inventory.deduct(-adjustment.value);
     await this.inventoryRepository.save(inventory);
+
+    // Keep the product's published state in sync with inventory availability:
+    // a published product with no remaining stock becomes OutOfStock, and
+    // restocking brings an OutOfStock product back to Published.
+    const product = await this.productRepository.findById(inventory.productId);
+    if (product !== null) {
+      const inventories = await this.inventoryRepository.findByProduct(product);
+      const totalStock = inventories.reduce((sum, inv) => sum + inv.availableStock, 0);
+      if (totalStock === 0 && product.productStatus === ProductStatus.PUBLISHED) {
+        product.updateDetails({ stock: 0 });
+        await this.productRepository.save(product);
+      } else if (totalStock > 0 && product.productStatus === ProductStatus.OUT_OF_STOCK) {
+        product.updateDetails({ stock: totalStock });
+        await this.productRepository.save(product);
+      }
+    }
+
     return inventory;
   }
 

@@ -223,6 +223,14 @@ export class Product {
         throw new Error('Product.stock cannot be negative.');
       }
       this._stock = changes.stock;
+      // Automatic status transition based on stock availability: a published
+      // product with zero stock becomes OutOfStock, and restocking an
+      // OutOfStock product brings it back to Published.
+      if (changes.stock === 0 && this._productStatus === ProductStatus.PUBLISHED) {
+        this._productStatus = ProductStatus.OUT_OF_STOCK;
+      } else if (changes.stock > 0 && this._productStatus === ProductStatus.OUT_OF_STOCK) {
+        this._productStatus = ProductStatus.PUBLISHED;
+      }
     }
   }
 

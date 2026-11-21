@@ -17,7 +17,7 @@ import { Buyer, BuyerTrustLevel } from '../../domain/entities/Buyer.js';
 import type { DeliveryAddress, PaymentMethod } from '../../domain/model/value-objects.js';
 import { CartLine, ShoppingCart, CartStatus } from '../../domain/entities/ShoppingCart.js';
 import { OrderLine, Order } from '../../domain/entities/Order.js';
-import { OrderStatus } from '../../domain/model/enums.js';
+import { OrderStatus, ProductStatus } from '../../domain/model/enums.js';
 import { Warehouse } from '../../domain/entities/Warehouse.js';
 import type { Product } from '../../domain/entities/Product.js';
 import type { ProductVariant } from '../../domain/entities/ProductVariant.js';
@@ -472,6 +472,15 @@ export class BuyerService implements BuyerPort {
           { value: item.quantity } as any,
           order,
         );
+        // If the reservation exhausts available stock, mark the product
+        // as OutOfStock so it appears in the seller's OutOfStock section.
+        if (inv.availableStock === 0) {
+          const product = await this.productRepository.findById(item.product.productId);
+          if (product !== null && product.productStatus === ProductStatus.PUBLISHED) {
+            product.updateDetails({ stock: 0 });
+            await this.productRepository.save(product);
+          }
+        }
         reserved.push({ product: item.product, warehouse, quantity: item.quantity });
       }
 

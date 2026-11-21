@@ -51,6 +51,7 @@ import type { BuyerRepositoryPort } from '../../domain/ports/out/BuyerRepository
 import type { TransactionManagerPort } from '../../domain/ports/out/TransactionManagerPort.js';
 import type { AuditLogRepository } from '../../domain/ports/out/AuditLogRepository.js';
 import {
+  ProductStatus,
   SellerVerificationStatus,
   ShipmentStatus,
   StoreCategory,
@@ -434,6 +435,14 @@ export class SellerService implements SellerPort {
     target.addStock(quantity.value);
     await this.inventoryRepository.save(target);
 
+    // Keep product published state in sync with inventory availability.
+    const inventories = await this.inventoryRepository.findByProduct(product);
+    const totalStock = inventories.reduce((sum, inv) => sum + inv.availableStock, 0);
+    if (totalStock > 0 && product.productStatus === ProductStatus.OUT_OF_STOCK) {
+      product.updateDetails({ stock: totalStock });
+      await this.productRepository.save(product);
+    }
+
     await this.auditLogRepository.save(
       new AuditLog({
         id: globalThis.crypto.randomUUID(),
@@ -458,6 +467,18 @@ export class SellerService implements SellerPort {
       inventory.deduct(-adjustment.value);
     }
     await this.inventoryRepository.save(inventory);
+
+    // Keep product published state in sync with inventory availability.
+    const inventories = await this.inventoryRepository.findByProduct(product);
+    const totalStock = inventories.reduce((sum, inv) => sum + inv.availableStock, 0);
+    if (totalStock === 0 && product.productStatus === ProductStatus.PUBLISHED) {
+      product.updateDetails({ stock: 0 });
+      await this.productRepository.save(product);
+    } else if (totalStock > 0 && product.productStatus === ProductStatus.OUT_OF_STOCK) {
+      product.updateDetails({ stock: totalStock });
+      await this.productRepository.save(product);
+    }
+
     return inventory;
   }
 

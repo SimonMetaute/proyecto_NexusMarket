@@ -67,8 +67,10 @@ export function ProductsPage() {
   const products = productsQuery.data ?? [];
   const normalizedTerm = term.trim().toLowerCase();
   const visibleProducts = products.filter((product) => {
+    const isOutOfStock = product.productStatus === 'OutOfStock' || product.stock === 0;
     const matchesStatus =
-      statusFilter.length === 0 || product.productStatus === statusFilter;
+      statusFilter.length === 0 ||
+      (statusFilter === 'OutOfStock' ? isOutOfStock : product.productStatus === statusFilter);
     const matchesTerm =
       normalizedTerm.length === 0 ||
       product.name.toLowerCase().includes(normalizedTerm) ||

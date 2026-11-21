@@ -91,7 +91,7 @@ export function ProductDetailPage() {
   const isAuthenticated = session !== null;
   const correctPortal =
     session !== null ? PORTAL_BY_ROLE[session.user.role] : undefined;
-  const inStock = data.stock > 0;
+  const inStock = data.stock > 0 && data.productStatus !== 'OutOfStock';
   const maxQuantity = Math.max(1, data.stock);
 
   const updateQuantity = (next: number): void => {
