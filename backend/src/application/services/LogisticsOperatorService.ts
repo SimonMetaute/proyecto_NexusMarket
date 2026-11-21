@@ -279,6 +279,34 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
     if (order !== null) {
       order.deliver();
       await this.orderRepository.save(order);
+
+      // Consumir el stock reservado: deducir de availableStock/totalStock.
+      for (const line of order.orderLines) {
+        const inventories = await this.inventoryRepository.findByProduct({
+          productId: line.productId,
+        } as any);
+        if (inventories.length === 0) {
+          continue;
+        }
+        const inv = inventories[0];
+        if (inv === undefined) {
+          continue;
+        }
+        const warehouse = await this.warehouseRepository.findById(inv.warehouseId);
+        if (warehouse === null) {
+          continue;
+        }
+        try {
+          inv.deduct(line.quantity);
+          await this.inventoryRepository.save(inv);
+        } catch {
+          // Si no hay suficiente reservado, liberar lo que haya.
+          if (inv.reservedStock > 0) {
+            inv.deduct(inv.reservedStock);
+            await this.inventoryRepository.save(inv);
+          }
+        }
+      }
     }
 
     await this.auditLogRepository.save(

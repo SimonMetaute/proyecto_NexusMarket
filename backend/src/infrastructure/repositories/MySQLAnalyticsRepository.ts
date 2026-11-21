@@ -104,7 +104,7 @@ export class MySQLAnalyticsRepository implements AnalyticsRepositoryPort {
         "SELECT COUNT(*) AS value FROM products WHERE sellerId = ? AND productStatus = 'Published'",
         [sellerId],
       ),
-      scalar('SELECT COALESCE(SUM(stock), 0) AS value FROM products WHERE sellerId = ?', [
+      scalar(`SELECT COALESCE(SUM(i.availableStock), 0) AS value FROM inventory i INNER JOIN products p ON p.productId = i.productId WHERE p.sellerId = ?`, [
         sellerId,
       ]),
       scalar(
