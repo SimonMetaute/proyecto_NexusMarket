@@ -23,13 +23,18 @@ interface AvailableStockRow extends RowDataPacket {
 }
 
 function toDomain(row: InventoryRow): Inventory {
+  const availableStock = toNumber(row.availableStock);
+  const reservedStock = toNumber(row.reservedStock);
+  // Recompute totalStock to keep the domain invariant even if a previous
+  // write left it out of sync (availableStock + reservedStock = totalStock).
+  const totalStock = availableStock + reservedStock;
   return new Inventory({
     inventoryId: row.inventoryId,
     productId: row.productId,
     warehouseId: row.warehouseId,
-    availableStock: toNumber(row.availableStock),
-    reservedStock: toNumber(row.reservedStock),
-    totalStock: toNumber(row.totalStock),
+    availableStock,
+    reservedStock,
+    totalStock,
     updateDate: toDate(row.updateDate),
   });
 }
