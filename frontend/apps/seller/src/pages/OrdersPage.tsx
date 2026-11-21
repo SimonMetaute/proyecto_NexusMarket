@@ -39,6 +39,8 @@ const STATUS_FILTERS = [
   'Sent',
   'Delivered',
   'Cancelled',
+  'ReturnRequested',
+  'Returned',
 ] as const;
 
 export function OrdersPage() {

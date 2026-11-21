@@ -660,6 +660,10 @@ export class BuyerService implements BuyerPort {
     });
     await this.returnRepository.save(returnCase);
 
+    // Sincronizar estado de la orden a ReturnRequested.
+    stored.requestReturn();
+    await this.orderRepository.save(stored);
+
     await this.auditLogRepository.save(
       new AuditLog({
         id: globalThis.crypto.randomUUID(),

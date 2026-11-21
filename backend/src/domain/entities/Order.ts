@@ -196,4 +196,12 @@ export class Order {
   refund(): void {
     this._orderStatus = OrderStatus.REFUNDED;
   }
+
+  requestReturn(): void {
+    this._orderStatus = OrderStatus.RETURN_REQUESTED;
+  }
+
+  markReturned(): void {
+    this._orderStatus = OrderStatus.RETURNED;
+  }
 }

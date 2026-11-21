@@ -43,6 +43,7 @@ export function statusVariant(
     case 'Approved':
     case 'Active':
     case 'OK':
+    case 'Returned':
       return 'success';
     case 'Pending':
     case 'Draft':
@@ -51,6 +52,7 @@ export function statusVariant(
     case 'InTransit':
     case 'Shipped':
     case 'Maintenance':
+    case 'ReturnRequested':
       return 'warning';
     case 'Cancelled':
     case 'Rejected':

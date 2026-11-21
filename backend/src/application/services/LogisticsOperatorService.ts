@@ -340,6 +340,35 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
     found.receive();
     await this.returnRepository.save(found);
 
+    // Sincronizar la orden asociada a Returned.
+    const order = await this.orderRepository.findByIdentifier({
+      orderId: found.orderId,
+    } as Order);
+    if (order !== null) {
+      order.markReturned();
+      await this.orderRepository.save(order);
+
+      // Reintegrar inventario por cada linea de la orden.
+      for (const line of order.orderLines) {
+        const inventories = await this.inventoryRepository.findByProduct({
+          productId: line.productId,
+        } as any);
+        if (inventories.length === 0) {
+          continue;
+        }
+        const inv = inventories[0];
+        if (inv === undefined) {
+          continue;
+        }
+        const warehouse = await this.warehouseRepository.findById(inv.warehouseId);
+        if (warehouse === null) {
+          continue;
+        }
+        inv.reintegrateStock(line.quantity);
+        await this.inventoryRepository.save(inv);
+      }
+    }
+
     await this.auditLogRepository.save(
       new AuditLog({
         id: globalThis.crypto.randomUUID(),
@@ -361,7 +390,7 @@ export class LogisticsOperatorService implements LogisticsOperatorPort {
   }
 
   async registerReturnedStock(user: User, inventory: Inventory, quantity: Quantity, condition: string): Promise<Inventory> {
-    inventory.addStock(quantity.value);
+    inventory.reintegrateStock(quantity.value);
     await this.inventoryRepository.save(inventory);
     return inventory;
   }

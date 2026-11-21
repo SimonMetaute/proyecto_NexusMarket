@@ -87,6 +87,8 @@ export enum OrderStatus {
   DELIVERED = 'Delivered',
   CANCELLED = 'Cancelled',
   REFUNDED = 'Refunded',
+  RETURN_REQUESTED = 'ReturnRequested',
+  RETURNED = 'Returned',
 }
 
 export enum PaymentStatus {

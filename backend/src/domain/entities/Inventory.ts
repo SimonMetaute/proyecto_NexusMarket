@@ -128,4 +128,20 @@ export class Inventory {
     this._totalStock += quantity;
     this._updateDate = new Date();
   }
+
+  /**
+   * Reintegra unidades devueltas: incrementa availableStock y totalStock,
+   * y decrementa reservedStock si aún estaba reservada.
+   */
+  reintegrateStock(quantity: number): void {
+    if (quantity <= 0) {
+      throw new Error('Quantity must be greater than zero.');
+    }
+    if (quantity <= this._reservedStock) {
+      this._reservedStock -= quantity;
+    }
+    this._availableStock += quantity;
+    this._totalStock += quantity;
+    this._updateDate = new Date();
+  }
 }
