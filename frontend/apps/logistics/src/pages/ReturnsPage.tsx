@@ -51,7 +51,7 @@ export function ReturnsPage() {
     onSuccess: (response) => {
       setError(null);
       setMessage(
-        `Devolución ${response.returnId} recibida (${response.returnStatus}).`,
+        `Devolución #${response.returnId.slice(0, 8).toUpperCase()} recibida (${response.returnStatus}).`,
       );
       void queryClient.invalidateQueries({ queryKey: ['logistics', 'returns'] });
       void queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });

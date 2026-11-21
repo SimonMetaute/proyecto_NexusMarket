@@ -116,9 +116,6 @@ export function AppShell({
             <p className="truncate text-sm font-medium text-foreground">
               {portal.description}
             </p>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              Puerto {portal.port} · API http://localhost:3000/api/v1
-            </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">

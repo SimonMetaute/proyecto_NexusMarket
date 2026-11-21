@@ -64,7 +64,7 @@ export function DispatchQueuePage() {
     mutationFn: (shipmentId: string) => dispatchShipment(shipmentId),
     onSuccess: (response) => {
       setError(null);
-      setMessage(`Envío ${response.shipmentId} → ${response.shipmentStatus}.`);
+      setMessage(`Envío #${response.shipmentId.slice(0, 8).toUpperCase()} → ${response.shipmentStatus}.`);
       void refresh();
     },
     onError: (caught) => {
@@ -77,7 +77,7 @@ export function DispatchQueuePage() {
     mutationFn: (shipmentId: string) => confirmDelivery(shipmentId),
     onSuccess: (response) => {
       setError(null);
-      setMessage(`Envío ${response.shipmentId} → ${response.shipmentStatus}.`);
+      setMessage(`Envío #${response.shipmentId.slice(0, 8).toUpperCase()} → ${response.shipmentStatus}.`);
       void refresh();
     },
     onError: (caught) => {
@@ -87,6 +87,9 @@ export function DispatchQueuePage() {
   });
 
   const shipments = shipmentsQuery.data ?? [];
+  const warehouseNameById = new Map(
+    (warehousesQuery.data ?? []).map((w) => [w.warehouseId, w.name]),
+  );
   const pendingDispatch = shipments.filter(
     (shipment) =>
       shipment.shipmentStatus === 'Scheduled' ||
@@ -233,17 +236,15 @@ export function DispatchQueuePage() {
             {shipments.map((shipment) => (
               <TableRow key={shipment.shipmentId}>
                 <TableCell>
-                  <p className="font-mono text-xs">{shipment.shipmentId}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {shipment.trackingCode}
-                  </p>
+                  <p className="font-semibold text-foreground">{shipment.trackingCode}</p>
                 </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {shipment.orderId}
+                <TableCell className="font-mono text-xs tabular-nums">
+                  #{shipment.orderId.slice(0, 8).toUpperCase()}
                 </TableCell>
                 <TableCell>{shipment.carrier.name}</TableCell>
-                <TableCell className="font-mono text-xs">
-                  {shipment.warehouseId}
+                <TableCell className="text-sm">
+                  {warehouseNameById.get(shipment.warehouseId) ??
+                    `BOD-${shipment.warehouseId.slice(0, 8).toUpperCase()}`}
                 </TableCell>
                 <TableCell className="max-w-[16rem] text-sm">
                   <p className="font-medium">
