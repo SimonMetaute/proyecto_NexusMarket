@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Alert,
   Button,
@@ -6,18 +6,23 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  ErrorState,
   FormField,
   Input,
   PageHeader,
   Select,
+  Skeleton,
   Textarea,
+  addProductImage,
   createProduct,
   createVariant,
+  deleteProductImage,
+  listProductImages,
   publishProduct,
   toApiError,
 } from '@nexus/shared';
-import type { CreateProductResponse } from '@nexus/shared';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import type { CreateProductResponse, ProductImage } from '@nexus/shared';
+import { ArrowLeft, CheckCircle2, ImagePlus, Trash2 } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -227,14 +232,48 @@ function CreatedProductPanel({
     additionalPrice: '',
     skuVariant: '',
   });
+  const [imageUrl, setImageUrl] = useState('');
   const [published, setPublished] = useState(product.status === 'Published');
+
+  const imagesQuery = useQuery({
+    queryKey: ['seller', 'product-images', product.productId],
+    queryFn: () => listProductImages(product.productId),
+  });
+
+  const refresh = async (): Promise<void> => {
+    await queryClient.invalidateQueries({
+      queryKey: ['seller', 'product-images', product.productId],
+    });
+    await queryClient.invalidateQueries({ queryKey: ['seller', 'products'] });
+    await queryClient.invalidateQueries({ queryKey: ['seller', 'dashboard'] });
+    await queryClient.invalidateQueries({ queryKey: ['catalog'] });
+  };
 
   const publish = useMutation({
     mutationFn: () => publishProduct(product.productId),
     onSuccess: (response) => {
       setPublished(true);
       onMessage(`Producto publicado: ${response.status}. ${response.message}`);
-      void queryClient.invalidateQueries({ queryKey: ['catalog'] });
+      void refresh();
+    },
+    onError: (caught) => onError(toApiError(caught).message),
+  });
+
+  const addImage = useMutation({
+    mutationFn: (url: string) => addProductImage(product.productId, { url }),
+    onSuccess: () => {
+      onMessage('Imagen agregada.');
+      setImageUrl('');
+      void refresh();
+    },
+    onError: (caught) => onError(toApiError(caught).message),
+  });
+
+  const removeImage = useMutation({
+    mutationFn: (imageId: string) => deleteProductImage(product.productId, imageId),
+    onSuccess: () => {
+      onMessage('Imagen eliminada.');
+      void refresh();
     },
     onError: (caught) => onError(toApiError(caught).message),
   });
@@ -289,16 +328,106 @@ function CreatedProductPanel({
             <Button
               className="w-full"
               loading={publish.isPending}
-              disabled={published}
+              disabled={
+                 published ||
+                 (imagesQuery.data?.length ?? 0) === 0 ||
+                 (product.sku ?? '').length === 0
+               }
               onClick={() => publish.mutate()}
             >
               {published ? 'Producto publicado' : 'Publicar producto'}
             </Button>
             <p className="mt-2 text-xs text-muted-foreground">
-              Publicar exige vendedor verificado y SKU. Si el backend rechaza, verás su
+              Publicar exige vendedor verificado, SKU y al menos una imagen. Si el backend
               mensaje exacto.
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ImagePlus className="h-4 w-4" /> Imágenes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form
+            className="flex flex-col gap-2 sm:flex-row sm:items-end"
+            onSubmit={(event) => {
+              event.preventDefault();
+              addImage.mutate(imageUrl.trim());
+            }}
+          >
+            <div className="flex-1">
+              <FormField label="URL de la imagen" htmlFor="imageUrl">
+                <Input
+                  id="imageUrl"
+                  type="url"
+                  required
+                  value={imageUrl}
+                  onChange={(event) => setImageUrl(event.target.value)}
+                  placeholder="https://..."
+                />
+              </FormField>
+            </div>
+            <Button
+              type="submit"
+              loading={addImage.isPending}
+              disabled={imageUrl.trim().length === 0}
+            >
+              Agregar
+            </Button>
+          </form>
+
+          {imagesQuery.isLoading ? (
+            <Skeleton className="h-24 w-full" />
+          ) : null}
+          {imagesQuery.isError ? (
+            <ErrorState
+              error={imagesQuery.error}
+              onRetry={() => void imagesQuery.refetch()}
+            />
+          ) : null}
+
+          {imagesQuery.data !== undefined && imagesQuery.data.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Sin imágenes. Se requiere al menos una para publicar.
+            </p>
+          ) : null}
+
+          {imagesQuery.data !== undefined && imagesQuery.data.length > 0 ? (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {imagesQuery.data.map((image: ProductImage) => (
+                <li
+                  key={image.imageId}
+                  className="overflow-hidden rounded-xl border border-[#171717]/12"
+                >
+                  <img
+                    src={image.url}
+                    alt={product.name}
+                    className="h-32 w-full object-cover"
+                  />
+                  <div className="flex items-center justify-between gap-2 p-2">
+                    <span className="truncate text-xs text-muted-foreground">
+                      {image.imageId}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      loading={
+                        removeImage.isPending &&
+                        removeImage.variables === image.imageId
+                      }
+                      onClick={() => removeImage.mutate(image.imageId)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </CardContent>
       </Card>
 
