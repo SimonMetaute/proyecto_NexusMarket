@@ -161,7 +161,7 @@ export function NewProductPage() {
                   onChange={(event) => update('stock', event.target.value)}
                 />
               </FormField>
-              <FormField label="SKU (opcional)" htmlFor="sku">
+              <FormField label="SKU (obligatorio)" htmlFor="sku">
                 <Input
                   id="sku"
                   maxLength={100}
