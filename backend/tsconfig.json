@@ -43,5 +43,5 @@
     "moduleDetection": "force",
     "skipLibCheck": true,
   },
-  "exclude": ["tests", ".seed-admin.ts", "Dockerfile", ".smoke-*.ts", ".check-*.ts"]
+  "exclude": ["tests", "dist", ".seed-admin.ts", "Dockerfile", ".smoke-*.ts", ".check-*.ts"]
 }

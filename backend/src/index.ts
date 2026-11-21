@@ -159,7 +159,7 @@ const sellerService = new SellerService(
 const userController = new UserController(createUserUseCase);
 const productController = new ProductController(createProductUseCase, listProductsUseCase);
 const authController = new AuthController(loginUseCase, jwtService, publicAccessService);
-const catalogController = new CatalogController(publicAccessService);
+const catalogController = new CatalogController(publicAccessService, productImageRepository);
 const buyerController = new BuyerController(buyerService);
 const sellerController = new SellerController(sellerService);
 

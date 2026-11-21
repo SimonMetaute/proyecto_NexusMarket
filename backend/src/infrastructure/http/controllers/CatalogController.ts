@@ -4,6 +4,7 @@
  */
 import type { Request, Response } from 'express';
 import type { PublicAccessPort } from '../../../domain/ports/in/PublicAccessPort.js';
+import type { ProductImageRepositoryPort } from '../../../domain/ports/out/ProductImageRepositoryPort.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { optionalString, requireParam } from '../validation/validator.js';
 
@@ -28,9 +29,14 @@ function queryNumber(value: unknown): number | undefined {
 
 export class CatalogController {
   private readonly publicAccess: PublicAccessPort;
+  private readonly productImageRepository: ProductImageRepositoryPort;
 
-  constructor(publicAccess: PublicAccessPort) {
+  constructor(
+    publicAccess: PublicAccessPort,
+    productImageRepository: ProductImageRepositoryPort,
+  ) {
     this.publicAccess = publicAccess;
+    this.productImageRepository = productImageRepository;
   }
 
   async searchProducts(req: Request, res: Response): Promise<void> {
@@ -58,23 +64,38 @@ export class CatalogController {
     const start = (page - 1) * limit;
     const paginated = products.slice(start, start + limit);
 
+    const productsWithImages = await Promise.all(
+      paginated.map(async (p) => {
+        const images = await this.productImageRepository.findByProductId(p.productId);
+        return {
+          productId: p.productId,
+          name: p.name,
+          description: p.description,
+          category: p.category,
+          price: p.price,
+          currency: 'USD',
+          seller: { sellerId: p.sellerId },
+          brand: p.brand,
+          sku: p.sku,
+          productStatus: p.productStatus,
+          stock: p.stock,
+          images: images.map((img) => ({
+            imageId: img.imageId,
+            productId: img.productId,
+            url: img.url,
+            altText: img.altText,
+            position: img.position,
+            createdAt: img.createdAt instanceof Date ? img.createdAt.toISOString() : String(img.createdAt),
+          })),
+        };
+      }),
+    );
+
     res.status(200).json({
       total: products.length,
       page,
       limit,
-      products: paginated.map((p) => ({
-        productId: p.productId,
-        name: p.name,
-        description: p.description,
-        category: p.category,
-        price: p.price,
-        currency: 'USD',
-        seller: { sellerId: p.sellerId },
-        brand: p.brand,
-        sku: p.sku,
-        productStatus: p.productStatus,
-        stock: p.stock,
-      })),
+      products: productsWithImages,
     });
   }
 
@@ -89,6 +110,7 @@ export class CatalogController {
       stock: 0,
       createdAt: new Date(),
     } as any);
+    const images = await this.productImageRepository.findByProductId(productId);
     res.status(200).json({
       productId: product.productId,
       name: product.name,
@@ -103,6 +125,14 @@ export class CatalogController {
       publicationDate: product.publicationDate,
       stock: product.stock,
       createdAt: product.createdAt,
+      images: images.map((img) => ({
+        imageId: img.imageId,
+        productId: img.productId,
+        url: img.url,
+        altText: img.altText,
+        position: img.position,
+        createdAt: img.createdAt instanceof Date ? img.createdAt.toISOString() : String(img.createdAt),
+      })),
     });
   }
 }

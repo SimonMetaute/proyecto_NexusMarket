@@ -373,7 +373,15 @@ export function CatalogPage() {
                     aria-label={`Ver ${product.name}`}
                   >
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(232,90,36,0.10),transparent_55%)]" />
-                    <Package className="h-16 w-16 text-[#171717]/20 transition-transform duration-500 ease-smooth group-hover:scale-110 group-hover:text-[#171717]/40" />
+                    {product.images !== undefined && product.images.length > 0 ? (
+                      <img
+                        src={product.images[0].url}
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform duration-500 ease-smooth group-hover:scale-105"
+                      />
+                    ) : (
+                      <Package className="h-16 w-16 text-[#171717]/20 transition-transform duration-500 ease-smooth group-hover:scale-110 group-hover:text-[#171717]/40" />
+                    )}
                     <span className="absolute left-3 top-3">
                       <Badge variant={inStock ? 'success' : 'destructive'}>
                         <span

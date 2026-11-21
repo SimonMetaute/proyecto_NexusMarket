@@ -82,6 +82,7 @@ export interface CatalogProduct {
   stock: number;
   publicationDate?: string;
   createdAt?: string;
+  images?: ProductImage[];
 }
 
 export interface CatalogPage {

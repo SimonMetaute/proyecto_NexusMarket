@@ -114,14 +114,24 @@ export function ProductDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <div className="space-y-5">
-          <div className="group relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-3xl border border-[#f7f6f2]/12 bg-[#f7f6f2]/[0.05]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(232,90,36,0.10),transparent_58%)]" />
-            <div className="hero-grid absolute inset-0 opacity-40" />
-            <Package className="relative h-28 w-28 text-[#171717]/20 transition-transform duration-500 ease-smooth group-hover:scale-105" />
-            <span className="absolute bottom-4 left-4 rounded-full border border-[#f7f6f2]/15 bg-[#f7f6f2]/[0.06] px-3 py-1 text-[11px] text-[#171717]/60 backdrop-blur">
-              Sin imagen en el contrato del backend
-            </span>
-          </div>
+          {data.images !== undefined && data.images.length > 0 ? (
+            <div className="group relative aspect-[4/3] overflow-hidden rounded-3xl border border-[#f7f6f2]/12 bg-[#f7f6f2]/[0.05]">
+              <img
+                src={data.images[0].url}
+                alt={data.name}
+                className="h-full w-full object-cover transition-transform duration-500 ease-smooth group-hover:scale-105"
+              />
+            </div>
+          ) : (
+            <div className="group relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-3xl border border-[#f7f6f2]/12 bg-[#f7f6f2]/[0.05]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(232,90,36,0.10),transparent_58%)]" />
+              <div className="hero-grid absolute inset-0 opacity-40" />
+              <Package className="relative h-28 w-28 text-[#171717]/20 transition-transform duration-500 ease-smooth group-hover:scale-105" />
+              <span className="absolute bottom-4 left-4 rounded-full border border-[#f7f6f2]/15 bg-[#f7f6f2]/[0.06] px-3 py-1 text-[11px] text-[#171717]/60 backdrop-blur">
+                Sin imagen
+              </span>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-[#171717]/10 bg-card p-5 sm:p-6">
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">

@@ -147,10 +147,22 @@ export function CartPage() {
                 key={line.cartLineId}
                 className="card-hover flex flex-col gap-4 rounded-2xl border border-[#171717]/10 bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0 space-y-1">
-                  <p className="truncate font-semibold text-foreground">
-                    {lineName(line.productId)}
-                  </p>
+                <div className="flex items-center gap-3 min-w-0">
+                  {lookup.byId.get(line.productId)?.imageUrl !== undefined ? (
+                    <img
+                      src={lookup.byId.get(line.productId)?.imageUrl}
+                      alt={lineName(line.productId)}
+                      className="h-14 w-14 shrink-0 rounded-lg object-cover border border-[#171717]/10"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-[#171717]/10 bg-[#f7f6f2]/[0.05]">
+                      <ShoppingCart className="h-5 w-5 text-[#171717]/20" />
+                    </div>
+                  )}
+                  <div className="min-w-0 space-y-1">
+                    <p className="truncate font-semibold text-foreground">
+                      {lineName(line.productId)}
+                    </p>
                   <p className="truncate font-mono text-[11px] text-muted-foreground">
                     {line.variantId !== undefined ? `Variante ${line.variantId} · ` : ''}
                     Producto {line.productId}
@@ -161,6 +173,7 @@ export function CartPage() {
                       {formatMoney(line.subtotal)}
                     </span>
                   </p>
+                </div>
                 </div>
 
                 <div className="flex items-center gap-2">
