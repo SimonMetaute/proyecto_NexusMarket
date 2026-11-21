@@ -601,6 +601,18 @@ export class BuyerService implements BuyerPort {
     if (stored.buyerId !== buyer.buyerId) {
       throw ApiError.forbidden('Cannot request a return for another buyer order');
     }
+
+    const existingReturns = await this.returnRepository.findByOrder(stored);
+    if (
+      existingReturns.some(
+        (existing) => existing.returnStatus !== ReturnStatus.REJECTED,
+      )
+    ) {
+      throw ApiError.alreadyExists(
+        `Order ${stored.orderId} already has an active return request.`,
+      );
+    }
+
     if (stored.orderStatus !== OrderStatus.DELIVERED) {
       throw ApiError.invalidDomainValue(
         'Returns are only allowed for orders in Delivered state.',
@@ -629,17 +641,6 @@ export class BuyerService implements BuyerPort {
       throw ApiError.invalidDomainValue(
         `The ${RETURN_WINDOW_DAYS}-day return window has expired.`,
         { deliveryDate: delivered.deliveryDate.toISOString() },
-      );
-    }
-
-    const existingReturns = await this.returnRepository.findByOrder(stored);
-    if (
-      existingReturns.some(
-        (existing) => existing.returnStatus !== ReturnStatus.REJECTED,
-      )
-    ) {
-      throw ApiError.alreadyExists(
-        `Order ${stored.orderId} already has an active return request.`,
       );
     }
 
