@@ -151,14 +151,6 @@ export function StorefrontShell() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-[#171717] bg-deep">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-6 text-xs text-on-deep-muted sm:flex-row sm:items-center sm:justify-between">
-          <span>NexusMarket · Buyer Storefront (puerto 5173)</span>
-          <span className="font-mono tabular-nums">
-            API http://localhost:3000/api/v1
-          </span>
-        </div>
-      </footer>
     </div>
   );
 }
