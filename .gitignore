@@ -143,3 +143,11 @@ vite.config.ts.timestamp-*
 .vite/
 
 !backend/src/domain/ports/out/
+
+# Archivos temporales de salida / pruebas manuales
+tsc_*.txt
+*-exit.txt
+prod-*.json
+cleanup-done.txt
+exit_code.txt
+prod-test-status.txt
