@@ -32,6 +32,7 @@ export const appConfig = {
     user: envString('MYSQL_USER', 'nexus_user'),
     password: envString('MYSQL_PASSWORD', 'nexus_pass'),
     database: envString('MYSQL_DATABASE', 'nexusmarket'),
+    ssl: envString('MYSQL_SSL', 'false').toLowerCase() === 'true' || envString('NODE_ENV', 'development') === 'production',
   },
   mongo: {
     uri: envString('MONGO_URI', 'mongodb://localhost:27017/audit_db'),
@@ -44,8 +45,11 @@ export const appConfig = {
   },
   cors: {
     allowedOrigins: envString(
-      'CORS_ALLOWED_ORIGINS',
-      'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176',
+      'CORS_ORIGINS',
+      envString(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176',
+      ),
     )
       .split(',')
       .map((origin) => origin.trim())
